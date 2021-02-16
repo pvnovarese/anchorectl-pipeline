@@ -46,9 +46,7 @@ pipeline {
           // since we're using hub, we can just leave the first argument ''
           // if you're using a different registry, you'll need to add that
           // 
-          docker.withRegistry( '', HUB_CREDENTIAL) {
-            def DOCKER_IMAGE = docker.build(REPOSITORY + TAG)
-          }
+          DOCKER_IMAGE = docker.build REPOSITORY + TAG
         }
       }
     }
@@ -71,7 +69,7 @@ pipeline {
     stage('Re-tag as prod and push to registry') {
       steps {
         script {
-          docker.withRegistry('', HUB_CREDENTIAL) {
+          docker.withRegistry( '', HUB_CREDENTIAL) {
             DOCKER_IMAGE.push('prod') 
             // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing          
           }
