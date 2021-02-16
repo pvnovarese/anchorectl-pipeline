@@ -86,5 +86,11 @@ pipeline {
         } // end script
       } // end steps
     } // end stage "re-tag as prod"
+    stage('Clean up') {
+      // delete the images locally
+      steps {
+        sh 'docker rmi ${REPOSITORY}${TAG} ${REPOSITORY}:prod'
+      } // end steps
+    } // end stage "clean up"
   } // end stages
 } // end pipeline
