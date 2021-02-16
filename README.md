@@ -1,4 +1,4 @@
-# Demo: Analyzes images with syft in a jenkins pipeline
+# Demo: Analyze images with syft in a jenkins pipeline
 
 This is a very rough demo of integrating Syft with Jenkins.  If you don't know what Syft is, read up here: https://github.com/anchore/syft
 
