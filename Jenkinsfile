@@ -20,7 +20,7 @@ pipeline {
     ANCHORE = credentials("${ANCHORE_CREDENTIAL}")
     //
     // api endpoint of your anchore instance
-    ANCHORE_URL = "http://anchore1.novarese.net:8228/v1"
+    ANCHORE_URL = "http://anchore-priv.novarese.net:8228/v1"
     //
     // assuming you want to use docker hub, this shouldn't need
     // any changes, but if you're using another registry, you
