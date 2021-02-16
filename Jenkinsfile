@@ -47,7 +47,7 @@ pipeline {
           // if you're using a different registry, you'll need to add that
           // 
           docker.withRegistry( '', HUB_CREDENTIAL) {
-            def image = docker.build(REPOSITORY + TAG)
+            def DOCKER_IMAGE = docker.build(REPOSITORY + TAG)
           }
         }
       }
@@ -72,8 +72,8 @@ pipeline {
       steps {
         script {
           docker.withRegistry('', HUB_CREDENTIAL) {
-            dockerImage.push('prod') 
-            // dockerImage.push takes the argument as a new tag for the image before pushing          
+            DOCKER_IMAGE.push('prod') 
+            // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing          
           }
         }
       }
