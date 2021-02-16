@@ -39,7 +39,7 @@ pipeline {
         checkout scm
       }
     }
-    stage('Build image and tag as latest') {
+    stage('Build image and tag as dev') {
       steps {
         sh 'docker --version'
         script {
@@ -68,12 +68,12 @@ pipeline {
         }      
       }
     }
-    stage('Build image with prod tag and push to registry') {
+    stage('Re-tag as prod and push to registry') {
       steps {
         script {
-          docker.withRegistry('https://' + registry, registryCredential) {
-            def image = docker.build(repository + ':prod')
-            image.push()  
+          docker.withRegistry('', CREDENTIAL) {
+            dockerImage.push('prod') 
+            // dockerImage.push takes the argument as a new tag for the image before pushing          
           }
         }
       }
