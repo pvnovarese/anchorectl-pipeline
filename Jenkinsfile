@@ -64,7 +64,7 @@ pipeline {
         //
         // sh '/var/jenkins_home/syft -o json ${repository}:latest | jq .artifacts[].name | tr "\n" " " | grep -qv curl'
         withCredentials([usernamePassword(credentialsId: ANCHORE_CREDENTIAL, usernameVariable: 'ANCHORE_USER', passwordVariable: 'ANCHORE_PASS')]) {
-          sh '/var/jenkins_home/syft ${REPOSITORY}${TAG} -H ${ANCHORE_URL} -u ${ANCHORE_USER} -p ${ANCHORE_PASS}
+          sh '/var/jenkins_home/syft ${REPOSITORY}${TAG} -H ${ANCHORE_URL} -u ${ANCHORE_USER} -p ${ANCHORE_PASS}'
         }      
       }
     }
