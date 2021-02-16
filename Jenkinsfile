@@ -71,7 +71,7 @@ pipeline {
     stage('Re-tag as prod and push to registry') {
       steps {
         script {
-          docker.withRegistry('', CREDENTIAL) {
+          docker.withRegistry('', HUB_CREDENTIAL) {
             dockerImage.push('prod') 
             // dockerImage.push takes the argument as a new tag for the image before pushing          
           }
