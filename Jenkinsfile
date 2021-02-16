@@ -11,12 +11,14 @@ pipeline {
     // we'll use the USR part for figuring out where are repository is
     //
     HUB_CREDENTIAL = "docker-hub"
+    // use credentials to set DOCKER_HUB_USR and DOCKER_HUB_PSW
     DOCKER_HUB = credentials("${HUB_CREDENTIAL}")
     //
     // we'll need the anchore credential to pass the user
     // and password to syft so it can upload the results
     //
     ANCHORE_CREDENTIAL = "AnchoreJenkinsUser"
+    // use credentials to set ANCHORE_USR and ANCHORE_PSW
     ANCHORE = credentials("${ANCHORE_CREDENTIAL}")
     //
     // api endpoint of your anchore instance
@@ -61,9 +63,15 @@ pipeline {
         // wherever you want, just fix this path.
         //
         // sh '/var/jenkins_home/syft -o json ${repository}:latest | jq .artifacts[].name | tr "\n" " " | grep -qv curl'
-        withCredentials([usernamePassword(credentialsId: ANCHORE_CREDENTIAL, usernameVariable: 'ANCHORE_USER', passwordVariable: 'ANCHORE_PASS')]) {
-          sh '/var/jenkins_home/syft ${REPOSITORY}${TAG} -H ${ANCHORE_URL} -u ${ANCHORE_USER} -p ${ANCHORE_PASS}'
-        }      
+        // withCredentials([usernamePassword(credentialsId: ANCHORE_CREDENTIAL, usernameVariable: 'ANCHORE_USER', passwordVariable: 'ANCHORE_PASS')]) {
+        sh '/var/jenkins_home/syft ${REPOSITORY}${TAG} -H ${ANCHORE_URL} -u ${ANCHORE_USR} -p ${ANCHORE_PSW}'
+          // syft only uploads the software bill of materials and doesn't 
+          // get an evaluation back.  if you want to evaluate the image
+          // and make a decision about breaking the pipeline, you'll need
+          // to do something like this:
+          // sh 'anchore-cli --url ${ANCHORE_URL} --u {ANCHORE_USER} --p ${ANCHORE_PASS} evaluate check ${REPOSITORY}${TAG}
+          // 
+        //}      
       }
     }
     stage('Re-tag as prod and push to registry') {
