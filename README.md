@@ -21,7 +21,7 @@ Once Jenkins is up and running, we have just a few things to configure:
 - Create a credential so we can push images into Docker Hub:
 	- go to manage jenkins -> manage credentials
 	- click “global” and “add credentials”
-	- Use your Docker Hub username and password (get an access token from Docker Hub if you are using multifactor authentication), and set the ID of the credential to “Docker Hub”.
+	- Use your Docker Hub username and password (get an access token from Docker Hub if you are using multifactor authentication), and set the ID of the credential to “docker-hub”.
 - Create a credential so we can send image analysis to Anchore	
 	- go to manage jenkins -> manage credentials
 	- click “global” and “add credentials”
