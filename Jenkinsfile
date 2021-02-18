@@ -68,6 +68,13 @@ pipeline {
         // -u, --username string  the username to authenticate against Anchore Enterprise
         // -p, --password string. the password to authenticate against Anchore Enterprise
         sh '${SYFT_LOCATION} ${REPOSITORY}${TAG} -H ${ANCHORE_URL} -u ${ANCHORE_USR} -p ${ANCHORE_PSW}'
+          //
+          // if we want to also do a simple package block, we can add something like this:
+          // syft -o json /                             # json output is more reliable to parse
+          // -H ${ANCHORE_URL} -u ${ANCHORE_USR} -p ${ANCHORE_PSW} ${REPOSITORY}${TAG} | /
+          // jq .artifacts[].name | tr "\n" " " | /.    # extract package names and remove linebreaks
+          // grep -qv curl                              # fail if "curl" (or whatever) is in the list of packages
+          //
           // syft only uploads the software bill of materials and doesn't 
           // get an evaluation back.  if you want to evaluate the image
           // and make a decision about breaking the pipeline, you'll need
