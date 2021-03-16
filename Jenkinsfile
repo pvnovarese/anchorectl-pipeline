@@ -75,7 +75,9 @@ pipeline {
           // jq .artifacts[].name | tr "\n" " " | /.    # extract package names and remove linebreaks
           // grep -qv curl                              # fail if "curl" (or whatever) is in the list of packages
           //
-          // syft only uploads the software bill of materials and doesn't 
+          // IMPORTANT!
+          // ----------
+          // syft ONLY uploads the software bill of materials and does NOT 
           // get an evaluation back.  if you want to evaluate the image
           // and make a decision about breaking the pipeline, you'll need
           // to do something like this:
@@ -83,16 +85,19 @@ pipeline {
           // 
       } // end steps
     } // end stage "analyze with syft"
-    stage('Re-tag as prod and push to registry') {
-      steps {
-        script {
-          docker.withRegistry( '', HUB_CREDENTIAL) {
-            DOCKER_IMAGE.push('prod') 
-            // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing          
-          }
-        } // end script
-      } // end steps
-    } // end stage "re-tag as prod"
+    // THIS STAGE IS OPTIONAL
+    // the purpose of this stage is to simply show that if an image passes the scan we could
+    // continue the pipeline with something like "promoting" the image to production etc
+    //stage('Re-tag as prod and push to registry') {
+    //  steps {
+    //    script {
+    //      docker.withRegistry( '', HUB_CREDENTIAL) {
+    //        DOCKER_IMAGE.push('prod') 
+    //        // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing          
+    //      }
+    //    } // end script
+    //  } // end steps
+    //} // end stage "re-tag as prod"
     stage('Clean up') {
       // delete the images locally
       steps {
