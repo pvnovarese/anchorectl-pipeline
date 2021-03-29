@@ -102,6 +102,10 @@ pipeline {
       // delete the images locally
       steps {
         sh 'docker rmi ${REPOSITORY}${TAG} #${REPOSITORY}:prod || failure=1' 
+        //
+        // the "|| failure=1" at the end of this line just catches problems with the :prod
+        // tag not existing if we didn't uncomment the optional "re-tag as prod" stage
+        //
       } // end steps
     } // end stage "clean up"
   } // end stages
