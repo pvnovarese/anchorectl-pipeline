@@ -81,7 +81,7 @@ pipeline {
           // get an evaluation back.  if you want to evaluate the image
           // and make a decision about breaking the pipeline, you'll need
           // to do something like this:
-        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u {ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}${TAG}'
+        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}${TAG}'
           // 
       } // end steps
     } // end stage "analyze with syft"
