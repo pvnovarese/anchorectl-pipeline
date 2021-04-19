@@ -35,8 +35,8 @@ pipeline {
     // assuming you want to use docker hub, this shouldn't need
     // any changes, but if you're using another registry, you
     // may need to tweek REPOSITORY 
-    REPOSITORY = "${DOCKER_HUB_USR}/anchore-pipeline-scanning"
-    TAG = ":devbuild-${BUILD_NUMBER}"    
+    REPOSITORY = "${DOCKER_HUB_USR}/jenkins-test"
+    TAG = ":anchore-pipeline-no-plugin-${BUILD_NUMBER}"    
     //
     // don't need an IMAGELINE if we're not using the anchore plugin
     // IMAGELINE = "${REPOSITORY}${TAG} Dockerfile"
@@ -48,56 +48,49 @@ pipeline {
         checkout scm
       } // end steps
     } // end stage "checkout scm"
-    stage('Build image and tag as dev') {
+    stage('Build image and push to docker hub') {
       steps {
         script {
           // build image and record repo/tag in DOCKER_IMAGE
-          // for now we're just going to build and pass it 
-          // to syft to scan, then later we'll push to the 
-          // registry which is why we need to save this in
-          // DOCKER_IMAGE variable.
-          // 
+          // then push it to docker hub (or whatever registry)
+          //
           DOCKER_IMAGE = docker.build REPOSITORY + TAG
+          docker.withRegistry( '', CREDENTIAL ) { 
+            DOCKER_IMAGE.push() 
+          }
         } // end script
       } // end steps
     } // end stage "build image and tag as dev"
-    stage('Analyze with syft and send report to Anchore') {
+    stage('Analyze and get evaluation via anchore-cli') {
       steps {
-        // execute SYFT_LOCATION with the image we just built.  options:
-        // -H, --host string      the hostname or URL of the Anchore Enterprise instance to upload to
-        // -u, --username string  the username to authenticate against Anchore Enterprise
-        // -p, --password string. the password to authenticate against Anchore Enterprise
-        sh '${SYFT_LOCATION} ${REPOSITORY}${TAG} -H ${ANCHORE_URL} -u ${ANCHORE_USR} -p ${ANCHORE_PSW}'
-          //
-          // if we want to also do a simple package block, we can add something like this:
-          // syft -o json /                             # json output is more reliable to parse
-          // -H ${ANCHORE_URL} -u ${ANCHORE_USR} -p ${ANCHORE_PSW} ${REPOSITORY}${TAG} | /
-          // jq .artifacts[].name | tr "\n" " " | /.    # extract package names and remove linebreaks
-          // grep -qv curl                              # fail if "curl" (or whatever) is in the list of packages
-          //
-          // IMPORTANT!
-          // ----------
-          // syft ONLY uploads the software bill of materials and does NOT 
-          // get an evaluation back.  if you want to evaluate the image
-          // and make a decision about breaking the pipeline, you'll need
-          // to do something like this:
-        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}${TAG}'
-          // 
+        // first, queue the image for analysis
+        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image add ${REPOSITORY}${TAG}'
+        // next, wait for analysis to complete
+        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}${TAG}'
+        // now, grab the evaluation
+        try {
+          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check --detail ${REPOSITORY}${TAG}'
+        } catch (err) {
+          // if evaluation fails, clean up (delete the image) and fail the build
+          sh 'docker rmi ${REPOSITORY}${TAG}'
+          sh 'exit 1'
+        } // end try
       } // end steps
     } // end stage "analyze with syft"
+    //
     // THIS STAGE IS OPTIONAL
     // the purpose of this stage is to simply show that if an image passes the scan we could
     // continue the pipeline with something like "promoting" the image to production etc
-    //stage('Re-tag as prod and push to registry') {
-    //  steps {
-    //    script {
-    //      docker.withRegistry( '', HUB_CREDENTIAL) {
-    //        DOCKER_IMAGE.push('prod') 
-    //        // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing          
-    //      }
-    //    } // end script
-    //  } // end steps
-    //} // end stage "re-tag as prod"
+    stage('Re-tag as prod and push to registry') {
+      steps {
+        script {
+          docker.withRegistry( '', HUB_CREDENTIAL) {
+            DOCKER_IMAGE.push('prod') 
+            // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing          
+          }
+        } // end script
+      } // end steps
+    } // end stage "re-tag as prod"
     stage('Clean up') {
       // delete the images locally
       steps {
