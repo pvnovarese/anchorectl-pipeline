@@ -55,7 +55,7 @@ pipeline {
           // then push it to docker hub (or whatever registry)
           //
           DOCKER_IMAGE = docker.build REPOSITORY + TAG
-          docker.withRegistry( '', CREDENTIAL ) { 
+          docker.withRegistry( '', HUB_CREDENTIAL ) { 
             DOCKER_IMAGE.push() 
           }
         } // end script
