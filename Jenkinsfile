@@ -63,18 +63,20 @@ pipeline {
     } // end stage "build image and tag as dev"
     stage('Analyze and get evaluation via anchore-cli') {
       steps {
-        // first, queue the image for analysis
-        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image add ${REPOSITORY}${TAG}'
-        // next, wait for analysis to complete
-        sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}${TAG}'
-        // now, grab the evaluation
-        try {
-          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check --detail ${REPOSITORY}${TAG}'
-        } catch (err) {
-          // if evaluation fails, clean up (delete the image) and fail the build
-          sh 'docker rmi ${REPOSITORY}${TAG}'
-          sh 'exit 1'
-        } // end try
+        script {
+          // first, queue the image for analysis
+          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image add ${REPOSITORY}${TAG}'
+          // next, wait for analysis to complete
+          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}${TAG}'
+          // now, grab the evaluation
+          try {
+            sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check --detail ${REPOSITORY}${TAG}'
+          } catch (err) {
+            // if evaluation fails, clean up (delete the image) and fail the build
+            sh 'docker rmi ${REPOSITORY}${TAG}'
+            sh 'exit 1'
+          } // end try
+        } // end script 
       } // end steps
     } // end stage "analyze with syft"
     //
