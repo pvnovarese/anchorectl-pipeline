@@ -1,5 +1,4 @@
-// requires syft https://github.com/anchore/syft
-// version 0.12.6 or higher
+// requires anchore-cli https://github.com/anchore/anchore-cli
 // requires anchore engine or anchore enterprise 
 //
 pipeline {
