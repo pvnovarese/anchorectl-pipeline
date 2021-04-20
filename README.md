@@ -11,9 +11,11 @@ We're going to run jenkins in a container to make this fairly self-contained and
 
 and we'll need to install jq, python, and anchore-cli in the jenkins container:
 
-`$ docker exec --user=0 jenkins apk add jq python3 
+```
+ $ docker exec --user=0 jenkins apk add jq python3 
  $ docker exec --user=0 jenkins python3 -m ensurepip
- $ docker exec --user=0 jenkins pip3 install --upgrade pip setuptools anchorecli`
+ $ docker exec --user=0 jenkins pip3 install --upgrade pip setuptools anchorecli
+``` 
 
 Once Jenkins is up and running, we have just a few things to configure:
 - Get the initial password (`$ docker logs jenkins`)
