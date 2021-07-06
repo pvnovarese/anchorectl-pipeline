@@ -93,7 +93,6 @@ pipeline {
             docker push ${REPOSITORY}:prod
             /var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} image add ${REPOSITORY}:prod
           """
-          }
         } // end script
       } // end steps
     } // end stage "re-tag as prod"
