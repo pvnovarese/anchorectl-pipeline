@@ -70,8 +70,10 @@ pipeline {
             //
           } catch (err) {
             // if evaluation fails, clean up (delete the image) and fail the build
-            sh 'docker rmi ${REPOSITORY}:${BUILD_NUMBER}'
-            sh 'exit 1'
+            sh """
+              docker rmi ${REPOSITORY}:${BUILD_NUMBER}
+              exit 1
+            """
           } // end try
         } // end script 
       } // end steps
@@ -83,11 +85,14 @@ pipeline {
     stage('Re-tag as prod and push to registry') {
       steps {
         script {
-          docker.withRegistry( '', HUB_CREDENTIAL) {
-            DOCKER_IMAGE.push('prod') 
-            // DOCKER_IMAGE.push takes the argument as a new tag for the image before pushing      
-          sh '/var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} image add ${REPOSITORY}:prod'
-            // this "image add" is just so the backend knows about the new tag for this image, we don't have to wait for an evaluation
+          // login to docker hub, re-tag image as "prod" and then push to docker hub
+          // then we use anchorectl to add the "prod" tag to the catalog - no need to wait for evaluation
+          sh """
+            docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
+            docker tag ${REPOSITORY}:${BUILD_NUMBER} ${REPOSITORY}:prod
+            docker push ${REPOSITORY}:prod
+            /var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} image add ${REPOSITORY}:prod
+          """
           }
         } // end script
       } // end steps
