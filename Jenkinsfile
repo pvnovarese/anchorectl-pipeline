@@ -59,22 +59,24 @@ pipeline {
           // 
           // (note - at this point the image has not been pushed anywhere)
           //
+          sh 'cat ${REPOSITORY}:${BUILD_NUMBER} > anchore_images'
+          anchore name: 'anchore_images'
           // next, wait for analysis to complete (even though we generated the sbom locally, the backend analyzer
           // still has some work to do - it validates the uploaded sbom and inserts it into the catalog, plus it
           // will do an initial policy evaluation etc.
-          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
+          // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
           // now, grab the evaluation
-          try {
-            sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}:${BUILD_NUMBER}'
-            // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
-            //
-          } catch (err) {
-            // if evaluation fails, clean up (delete the image) and fail the build
-            sh """
-              docker rmi ${REPOSITORY}:${BUILD_NUMBER}
-              exit 1
-            """
-          } // end try
+          // try {
+          //  sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}:${BUILD_NUMBER}'
+          //  // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
+          //  //
+          //} catch (err) {
+          // if evaluation fails, clean up (delete the image) and fail the build
+          //  sh """
+          //    docker rmi ${REPOSITORY}:${BUILD_NUMBER}
+          //    exit 1
+          //  """
+          //} // end try
         } // end script 
       } // end steps
     } // end stage "analyze with syft"
@@ -91,8 +93,9 @@ pipeline {
             docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
             docker tag ${REPOSITORY}:${BUILD_NUMBER} ${REPOSITORY}:prod
             docker push ${REPOSITORY}:prod
-            /var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} image add ${REPOSITORY}:prod
-          """
+            cat ${REPOSITORY}:prod > anchore_images
+            """
+          anchore name: 'anchore_images'
         } // end script
       } // end steps
     } // end stage "re-tag as prod"
