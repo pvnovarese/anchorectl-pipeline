@@ -59,12 +59,13 @@ pipeline {
           // 
           // (note - at this point the image has not been pushed anywhere)
           //
-          sh 'echo ${REPOSITORY}:${BUILD_NUMBER} > anchore_images'
-          anchore name: 'anchore_images'
           // next, wait for analysis to complete (even though we generated the sbom locally, the backend analyzer
           // still has some work to do - it validates the uploaded sbom and inserts it into the catalog, plus it
           // will do an initial policy evaluation etc.
-          // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
+          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
+          // now let's get the evaluation with the plugin
+          sh 'echo ${REPOSITORY}:${BUILD_NUMBER} > anchore_images'
+          anchore name: 'anchore_images'
           // now, grab the evaluation
           // try {
           //  sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}:${BUILD_NUMBER}'
