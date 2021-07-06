@@ -59,7 +59,7 @@ pipeline {
           // 
           // (note - at this point the image has not been pushed anywhere)
           //
-          sh 'cat ${REPOSITORY}:${BUILD_NUMBER} > anchore_images'
+          sh 'echo ${REPOSITORY}:${BUILD_NUMBER} > anchore_images'
           anchore name: 'anchore_images'
           // next, wait for analysis to complete (even though we generated the sbom locally, the backend analyzer
           // still has some work to do - it validates the uploaded sbom and inserts it into the catalog, plus it
@@ -93,7 +93,7 @@ pipeline {
             docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
             docker tag ${REPOSITORY}:${BUILD_NUMBER} ${REPOSITORY}:prod
             docker push ${REPOSITORY}:prod
-            cat ${REPOSITORY}:prod > anchore_images
+            echo ${REPOSITORY}:prod > anchore_images
             """
           anchore name: 'anchore_images'
         } // end script
