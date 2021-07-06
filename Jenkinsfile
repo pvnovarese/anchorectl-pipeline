@@ -73,7 +73,7 @@ pipeline {
             // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
             //
           } catch (err) {
-           if evaluation fails, clean up (delete the image) and fail the build
+            // if evaluation fails, clean up (delete the image) and fail the build
             sh """
               docker rmi ${REPOSITORY}:${BUILD_NUMBER}
               exit 1
