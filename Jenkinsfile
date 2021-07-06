@@ -55,29 +55,30 @@ pipeline {
       steps {
         script {
           // first, analyze with anchorectl and upload sbom to anchore enterprise
-          sh '/var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} sbom upload ${REPOSITORY}:${BUILD_NUMBER}'
+          sh """
+            /var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} sbom upload ${REPOSITORY}:${BUILD_NUMBER}
+            /usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}
+          """
           // 
           // (note - at this point the image has not been pushed anywhere)
           //
-          // next, wait for analysis to complete (even though we generated the sbom locally, the backend analyzer
-          // still has some work to do - it validates the uploaded sbom and inserts it into the catalog, plus it
-          // will do an initial policy evaluation etc.
-          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
-          // now let's get the evaluation with the plugin
-          sh 'echo ${REPOSITORY}:${BUILD_NUMBER} > anchore_images'
-          anchore name: 'anchore_images'
-          // now, grab the evaluation
-          // try {
-          //  sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}:${BUILD_NUMBER}'
-          //  // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
-          //  //
-          //} catch (err) {
-          // if evaluation fails, clean up (delete the image) and fail the build
-          //  sh """
-          //    docker rmi ${REPOSITORY}:${BUILD_NUMBER}
-          //    exit 1
-          //  """
-          //} // end try
+          // we do the "image wait" to wait for analysis to complete (even though we generated the sbom locally, 
+          // the backend analyzer still has some work to do - it validates the uploaded sbom and inserts it into 
+          // the catalog, plus it will do an initial policy evaluation etc.
+          // 
+          // now let's get the evaluation
+          //
+          try {
+            sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}:${BUILD_NUMBER}'
+            // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
+            //
+          } catch (err) {
+           if evaluation fails, clean up (delete the image) and fail the build
+            sh """
+              docker rmi ${REPOSITORY}:${BUILD_NUMBER}
+              exit 1
+            """
+          } // end try
         } // end script 
       } // end steps
     } // end stage "analyze with syft"
