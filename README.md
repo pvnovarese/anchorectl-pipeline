@@ -1,6 +1,6 @@
-# Demo: Analyze images with anchore-cli in a jenkins pipeline without the Anchore plugin
+# Demo: Analyze images with anchorectl in a jenkins pipeline without the Anchore plugin
 
-This is a very rough demo of integrating Anchore with Jenkins using anchore-cli.  you may wonder why we would want to do this since there's a very nice plugin available that makes this a lot easier.  Mostly this is just an example to follow when using other CICD tooling that doesn't have an anchore plugin.
+This is a very rough demo of integrating Anchore with Jenkins using anchorectl.  
 
 ## Part 1: Jenkins Setup
 
@@ -12,9 +12,13 @@ We're going to run jenkins in a container to make this fairly self-contained and
 and we'll need to install jq, python, and anchore-cli in the jenkins container:
 
 ```
- $ docker exec --user=0 jenkins apk add jq python3 
- $ docker exec --user=0 jenkins python3 -m ensurepip
- $ docker exec --user=0 jenkins pip3 install --upgrade pip setuptools anchorecli
+ $ docker exec --user=0 jenkins /bin/bash
+ # apk add jq python3 
+ # python3 -m ensurepip
+ # pip3 install --upgrade pip setuptools anchorecli
+ # curl -o /tmp/anchorectl.tar.gz https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.2/anchorectl_0.1.2_linux_amd64.tar.gz
+ # tar xzvf /tmp/anchorectl.tar.gz --directory /usr/local/bin
+ # exit 
 ``` 
 
 Once Jenkins is up and running, we have just a few things to configure:
