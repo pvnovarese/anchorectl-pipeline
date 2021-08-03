@@ -55,8 +55,8 @@ pipeline {
       steps {
         script {
           // first, analyze with anchorectl and upload sbom to anchore enterprise
-          sh '/var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} sbom upload ${REPOSITORY}:${BUILD_NUMBER}'
-          sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
+          sh '/var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} sbom upload --wait ${REPOSITORY}:${BUILD_NUMBER}'
+          // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
           // 
           // (note - at this point the image has not been pushed anywhere)
           //
