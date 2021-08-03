@@ -43,15 +43,26 @@ pipeline {
       } // end steps
     } // end stage "checkout scm"
     
-    stage('Build image and tag with build number') {
+    stage('Verify Tools') {
+      steps {
+        sh """
+          which docker
+          which anchore-cli
+          which /var/jenkins_home/anchorectl
+          """
+      } // end steps
+    } // end stage "Verify Tools"
+    
+    
+    stage('Build Image') {
       steps {
         script {
           dockerImage = docker.build REPOSITORY + ":${BUILD_NUMBER}"
         } // end script
       } // end steps
-    } // end stage "build image and tag w build number"
+    } // end stage "Build Image"
     
-    stage('Analyze image with anchorectl and get evaluation') {
+    stage('Analyze Image w/ anchorectl') {
       steps {
         script {
           // first, analyze with anchorectl and upload sbom to anchore enterprise
@@ -81,12 +92,12 @@ pipeline {
           } // end try
         } // end script 
       } // end steps
-    } // end stage "analyze with syft"
+    } // end stage "analyze with anchorectl"
     
     // THIS STAGE IS OPTIONAL
     // the purpose of this stage is to simply show that if an image passes the scan we could
     // continue the pipeline with something like "promoting" the image to production etc
-    stage('Re-tag as prod and push to registry') {
+    stage('Promote to Prod and Push to Registry') {
       steps {
         script {
           // login to docker hub, re-tag image as "prod" and then push to docker hub
@@ -100,9 +111,9 @@ pipeline {
           anchore name: 'anchore_images'
         } // end script
       } // end steps
-    } // end stage "re-tag as prod"
+    } // end stage "Promote to Prod"
     
-    stage('Clean up') {
+    stage('Clean Up') {
       // delete the images locally
       steps {
         sh 'docker rmi ${REPOSITORY}:${BUILD_NUMBER} ${REPOSITORY}:prod || failure=1' 
