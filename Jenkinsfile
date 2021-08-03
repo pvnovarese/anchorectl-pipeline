@@ -74,6 +74,8 @@ pipeline {
             // if evaluation fails, clean up (delete the image) and fail the build
             sh """
               docker rmi ${REPOSITORY}:${BUILD_NUMBER}
+              echo ${REPOSITORY}:${BUILD_NUMBER} > anchore_images
+              anchore name: 'anchore_images'
               exit 1
             """
           } // end try
