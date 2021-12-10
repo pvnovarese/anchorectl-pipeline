@@ -1,0 +1,173 @@
+# This workflow checks out code, builds an image, performs a container image
+# scan, evaluates the image, and promotes it if it passes.
+
+name: Anchore Enterprise with anchorectl
+
+on: 
+  #push:
+  #  branches:
+  #    - main
+  #schedule:
+  #  - cron: '38 19 * * 6'
+  workflow_dispatch:
+    branches:
+      - main
+
+  
+jobs:
+
+  Build-Scan-Promote:
+    runs-on: ubuntu-latest
+    env:
+      ANCHORECTL_ANCHORE_USER: ${{ secrets.ANCHORE_CLI_USER }}
+      ANCHORECTL_ANCHORE_PASSWORD: ${{ secrets.ANCHORE_CLI_PASS }}
+      ANCHORECTL_ANCHORE_URL: ${{ secrets.ANCHORE_CLI_URL }}
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+    - name: Install anchore-cli
+      run: |
+        sudo apt-get install python3-pip
+        pip install anchorecli
+        export PATH="$HOME/.local/bin/:$PATH"
+    - name: Install anchorectl
+      run: |
+      curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.3/anchorectl_0.1.3_linux_amd64.tar.gz | sudo tar xzvf - -C /usr/local/bin/
+      sudo chmod 0755 /usr/local/bin/anchorectl
+    - name: Build Docker Image
+      run: |
+        docker build . --file Dockerfile --tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+    - name: Verify Anchore Ready and Reachable
+      run: |
+        anchore-cli system status 
+    - name: Generate SBOM and Push to Anchore
+      run: |
+      /usr/local/bin/anchorectl sbom upload --wait --dockerfile ./Dockerfile ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+    - name: Pull Vulnerability List
+      run: |
+        anchore-cli image vuln ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} all | tee anchore-vuln.txt
+    - name: Pull Policy Evaluation
+      run: |
+        set -o pipefail
+        # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
+        anchore-cli evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
+    - name: Re-Tag Image
+      run: |
+        docker tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+    - name: Push Docker Image
+      run: |
+        docker push ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+    - name: Add Promoted Image to Anchore Queue
+      run: |
+        anchore-cli image add --noautosubscribe ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        anchore-cli image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+    - name: Archive Vulnerabilities and Evaluation
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: evaluation-report
+        path: anchore-*.txt
+        retention-days: 14
+
+
+
+
+
+
+
+
+
+
+
+  Push-Queue:
+    needs: Build-Scan
+    runs-on: ubuntu-latest
+    env:
+      ANCHORE_CLI_USER: ${{ secrets.ANCHORE_CLI_USER }}
+      ANCHORE_CLI_PASS: ${{ secrets.ANCHORE_CLI_PASS }}
+      ANCHORE_CLI_URL: ${{ secrets.ANCHORE_CLI_URL }}
+    steps:
+    - name: Login to ghcr.io
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdin
+- name: Download Dockerfile Artifact 
+      uses: actions/download-artifact@v2
+      with:
+        name: Dockerfile
+    - name: Install anchorectl
+      run: |
+      curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.3/anchorectl_0.1.3_linux_amd64.tar.gz | sudo tar xzvf - -C /usr/local/bin/
+      sudo chmod 0755 /usr/local/bin/anchorectl
+    - name: Install anchore-cli
+      run: |
+        sudo apt-get install python3-pip
+        pip install anchorecli
+        export PATH="$HOME/.local/bin/:$PATH"
+    - name: Add to Enterprise Queue
+      run: | 
+        anchore-cli image add --noautosubscribe --dockerfile ./Dockerfile ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+    - name: Wait for Enterprise Analysis
+      run: |
+        anchore-cli image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        # docker run -e ANCHORE_CLI_USER -e ANCHORE_CLI_PASS -e ANCHORE_CLI_URL anchore/engine-cli anchore-cli image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+  Evaluate:
+    needs: Scan-Analyze
+    runs-on: ubuntu-latest
+    env:
+      ANCHORE_CLI_USER: ${{ secrets.ANCHORE_CLI_USER }}
+      ANCHORE_CLI_PASS: ${{ secrets.ANCHORE_CLI_PASS }}
+      ANCHORE_CLI_URL: ${{ secrets.ANCHORE_CLI_URL }}
+    steps:
+    - name: Install anchore-cli
+      run: |
+        sudo apt-get install python3-pip
+        pip install anchorecli
+        export PATH="$HOME/.local/bin/:$PATH"
+    - name: Verify Anchore Ready and Reachable
+      run: |
+        anchore-cli system status 
+    - name: Pull Vulnerability List
+      run: |
+        anchore-cli image vuln ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} all | tee anchore-vuln.txt
+        # docker run -e ANCHORE_CLI_USER -e ANCHORE_CLI_PASS -e ANCHORE_CLI_URL anchore/engine-cli anchore-cli image vuln ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} all | tee anchore-vuln.txt
+    - name: Pull Policy Evaluation
+      run: |
+        set -o pipefail
+        # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
+        anchore-cli evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
+        # docker run -e ANCHORE_CLI_USER -e ANCHORE_CLI_PASS -e ANCHORE_CLI_URL anchore/engine-cli anchore-cli evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
+    - name: Archive Vulnerabilities and Evaluation
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: evaluation-report
+        path: anchore-*.txt
+        retention-days: 14
+        
+  Promote-Deploy:
+    needs: Evaluate
+    runs-on: ubuntu-latest
+    env:
+      ANCHORE_CLI_USER: ${{ secrets.ANCHORE_CLI_USER }}
+      ANCHORE_CLI_PASS: ${{ secrets.ANCHORE_CLI_PASS }}
+      ANCHORE_CLI_URL: ${{ secrets.ANCHORE_CLI_URL }}
+    steps:
+    - name: Login to ghcr.io
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdin
+    - name: Re-Tag Image
+      run: |
+        docker pull ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        docker tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+    - name: Push Docker Image
+      run: |
+        docker push ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+    - name: Install anchore-cli
+      run: |
+        sudo apt-get install python3-pip
+        pip install anchorecli
+        export PATH="$HOME/.local/bin/:$PATH"
+    - name: Add Promoted Image to Anchore Queue
+      run: |
+        anchore-cli image add --noautosubscribe ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        anchore-cli image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        # docker run -e ANCHORE_CLI_USER -e ANCHORE_CLI_PASS -e ANCHORE_CLI_URL anchore/engine-cli anchore-cli image add --noautosubscribe ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        # docker run -e ANCHORE_CLI_USER -e ANCHORE_CLI_PASS -e ANCHORE_CLI_URL anchore/engine-cli anchore-cli image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
