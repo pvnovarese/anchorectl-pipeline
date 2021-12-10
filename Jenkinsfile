@@ -35,8 +35,12 @@ pipeline {
     ANCHORE_CLI_PASS = "${ANCHORE_PSW}"
     //
     // api endpoint of your anchore instance (minus the /v1)
-    ANCHORECTL_ANCHORE_URL = "http://anchore33-priv.novarese.net:8228"
-    ANCHORE_CLI_URL = "http://anchore33-priv.novarese.net:8228"
+    // we could hardcode these eg:
+    // ANCHORECTL_ANCHORE_URL = "http://anchore33-priv.novarese.net:8228"
+    // ANCHORE_CLI_URL = "http://anchore33-priv.novarese.net:8228"
+    // but I have a secret text credential called AnchoreUrl:
+    ANCHORECTL_ANCHORE_URL = credentials("AnchoreURL")
+    ANCHORE_CLI_URL = credentials("AnchoreURL")
     //
     // assuming you want to use docker hub, this shouldn't need
     // any changes, but if you're using another registry, you
