@@ -26,13 +26,24 @@ pipeline {
     // use credentials to set ANCHORE_USR and ANCHORE_PSW
     ANCHORE = credentials("${ANCHORE_CREDENTIAL}")
     //
+    // now set the actual envvars that anchorectl uses:
+    ANCHORECTL_ANCHORE_USER = "${ANCHORE_USR}"
+    ANCHORECTL_ANCHORE_PASSWORD = "${ANCHORE_PSW}"
+    //
+    // and the same for anchore-cli
+    ANCHORE_CLI_USER = "${ANCHORE_USR}"
+    ANCHORE_CLI_PASS = "${ANCHORE_PSW}"
+    //
     // api endpoint of your anchore instance (minus the /v1)
-    ANCHORE_URL = "http://anchore3-priv.novarese.net:8228"
+    ANCHORECTL_ANCHORE_URL = "http://anchore33-priv.novarese.net:8228"
+    ANCHORE_CLI_URL = "http://anchore33-priv.novarese.net:8228"
     //
     // assuming you want to use docker hub, this shouldn't need
     // any changes, but if you're using another registry, you
     // may need to tweek REPOSITORY 
     REPOSITORY = "${DOCKER_HUB_USR}/anchorectl-test"
+    TAG = "build-${BUILD_NUMBER}"
+    PASSTAG = "main"
     //
   } // end environment
   agent any
@@ -57,7 +68,20 @@ pipeline {
     stage('Build Image') {
       steps {
         script {
-          dockerImage = docker.build REPOSITORY + ":${BUILD_NUMBER}"
+          // build image and record repo/tag in DOCKER_IMAGE
+          // then push it to docker hub (or whatever registry)
+          //
+          sh """
+            docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
+            docker build -t ${REPOSITORY}:${TAG} --pull -f ./Dockerfile .
+            # we don't need to push since we're using anchorectl, but if you wanted to you could do this:
+            # docker push ${REPOSITORY}:${TAG}
+          """
+          // I don't like using the docker plugin but if you want to use it, here ya go
+          // DOCKER_IMAGE = docker.build REPOSITORY + ":" + TAG
+          // docker.withRegistry( '', HUB_CREDENTIAL ) { 
+          //  DOCKER_IMAGE.push() 
+          // }
         } // end script
       } // end steps
     } // end stage "Build Image"
@@ -66,7 +90,7 @@ pipeline {
       steps {
         script {
           // first, analyze with anchorectl and upload sbom to anchore enterprise
-          sh '/var/jenkins_home/anchorectl --url ${ANCHORE_URL} --user ${ANCHORE_USR} --password ${ANCHORE_PSW} sbom upload --wait ${REPOSITORY}:${BUILD_NUMBER}'
+          sh '/var/jenkins_home/bin/anchorectl sbom upload --wait ${REPOSITORY}:${TAG}'
           // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
           // 
           // (note - at this point the image has not been pushed anywhere)
@@ -78,14 +102,15 @@ pipeline {
           // now let's get the evaluation
           //
           try {
-            sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} evaluate check ${REPOSITORY}:${BUILD_NUMBER}'
+            sh 'anchore-cli evaluate check ${REPOSITORY}:${TAG}'
             // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
             //
           } catch (err) {
             // if evaluation fails, clean up (delete the image) and fail the build
             sh """
-              docker rmi ${REPOSITORY}:${BUILD_NUMBER}
-              echo ${REPOSITORY}:${BUILD_NUMBER} > anchore_images
+              docker rmi ${REPOSITORY}:${TAG}
+              # optional: grab the evaluation with the anchore plugin so we can archive it
+              echo ${REPOSITORY}:${TAG} > anchore_images
               anchore name: 'anchore_images'
               exit 1
             """
@@ -100,12 +125,14 @@ pipeline {
     stage('Promote to Prod and Push to Registry') {
       steps {
         script {
-          // login to docker hub, re-tag image as "prod" and then push to docker hub
-          // then we use anchorectl to add the "prod" tag to the catalog - no need to wait for evaluation
+          // login to docker hub, re-tag image as ${PASSTAG} and then push to docker hub
+          // then we EITHER:
+          // 1. use anchorectl to add the PASSTAG tag to the catalog - no need to wait for evaluation
+          // 2. use anchore plugin to add the PASSTAG tag and grab the evaluation report
           sh """
             docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
-            docker tag ${REPOSITORY}:${BUILD_NUMBER} ${REPOSITORY}:prod
-            docker push ${REPOSITORY}:prod
+            docker tag ${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG}
+            docker push ${REPOSITORY}:${PASSTAG}
             echo ${REPOSITORY}:prod > anchore_images
             """
           anchore name: 'anchore_images'
@@ -116,7 +143,7 @@ pipeline {
     stage('Clean Up') {
       // delete the images locally
       steps {
-        sh 'docker rmi ${REPOSITORY}:${BUILD_NUMBER} ${REPOSITORY}:prod || failure=1' 
+        sh 'docker rmi ${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG} || failure=1' 
         //
         // the "|| failure=1" at the end of this line just catches problems with the :prod
         // tag not existing if we didn't uncomment the optional "re-tag as prod" stage
