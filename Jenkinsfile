@@ -133,7 +133,7 @@ pipeline {
             docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
             docker tag ${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG}
             docker push ${REPOSITORY}:${PASSTAG}
-            echo ${REPOSITORY}:prod > anchore_images
+            echo ${REPOSITORY}:${PASSTAG} > anchore_images
             """
           anchore name: 'anchore_images'
         } // end script
