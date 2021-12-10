@@ -57,6 +57,8 @@ jobs:
     - name: Re-Tag Image
       run: |
         docker tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+    - name: Login to ghcr.io
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdin
     - name: Push Docker Image
       run: |
         docker push ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
@@ -71,10 +73,3 @@ jobs:
         name: evaluation-report
         path: anchore-*.txt
         retention-days: 14
-
-
-
-
-
-
-
