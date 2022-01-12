@@ -115,12 +115,12 @@ pipeline {
             sh """
               docker rmi ${REPOSITORY}:${TAG}
               # optional: grab the evaluation with the anchore plugin so we can archive it
-              echo ${REPOSITORY}:${TAG} > anchore_images
-            """
-            anchore name: 'anchore_images'
-            sh """ 
+              # echo ${REPOSITORY}:${TAG} > anchore_images
+              # this doesn't actually work because we didn't push the image and the 
+              # plug-in automatically does an "image add" which fails.
               exit 1
             """
+            // anchore name: 'anchore_images'
           } // end try
         } // end script 
       } // end steps
