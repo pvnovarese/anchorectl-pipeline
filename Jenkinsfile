@@ -116,7 +116,9 @@ pipeline {
               docker rmi ${REPOSITORY}:${TAG}
               # optional: grab the evaluation with the anchore plugin so we can archive it
               echo ${REPOSITORY}:${TAG} > anchore_images
-              anchore name: 'anchore_images'
+            """
+            anchore name: 'anchore_images'
+            sh """ 
               exit 1
             """
           } // end try
