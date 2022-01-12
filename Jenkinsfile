@@ -63,7 +63,7 @@ pipeline {
         sh """
           which docker
           which anchore-cli
-          which /var/jenkins_home/bin/anchorectl
+          which anchorectl
           """
       } // end steps
     } // end stage "Verify Tools"
@@ -94,7 +94,7 @@ pipeline {
       steps {
         script {
           // first, analyze with anchorectl and upload sbom to anchore enterprise
-          sh '/var/jenkins_home/bin/anchorectl sbom upload --wait ${REPOSITORY}:${TAG}'
+          sh 'anchorectl sbom upload --wait ${REPOSITORY}:${TAG}'
           // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
           // 
           // (note - at this point the image has not been pushed anywhere)
