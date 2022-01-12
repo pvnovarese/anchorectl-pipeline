@@ -34,12 +34,13 @@ pipeline {
     ANCHORE_CLI_USER = "${ANCHORE_USR}"
     ANCHORE_CLI_PASS = "${ANCHORE_PSW}"
     //
-    // api endpoint of your anchore instance (minus the /v1)
+    // api endpoint of your anchore instance (anchore-cli needs the trailing /v1,
+    // anchorectl doesn't want the /v1)
     // we could hardcode these eg:
     // ANCHORECTL_ANCHORE_URL = "http://anchore33-priv.novarese.net:8228"
-    // ANCHORE_CLI_URL = "http://anchore33-priv.novarese.net:8228"
-    // but I have a secret text credential called AnchoreUrl:
-    ANCHORECTL_ANCHORE_URL = credentials("AnchoreUrl")
+    // ANCHORE_CLI_URL = "http://anchore33-priv.novarese.net:8228/v1/"
+    // but I have a secret text credential called AnchoreUrl and AnchorectlURL:
+    ANCHORECTL_ANCHORE_URL = credentials("AnchorectlUrl")
     ANCHORE_CLI_URL = credentials("AnchoreUrl")
     //
     // assuming you want to use docker hub, this shouldn't need
