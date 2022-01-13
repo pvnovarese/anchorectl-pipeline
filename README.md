@@ -1,5 +1,7 @@
 # Demo: Analyze images with anchorectl in a jenkins pipeline without the Anchore plugin
 
+[![Anchore Enterprise with anchorectl](https://github.com/pvnovarese/anchorectl-pipeline/actions/workflows/anchorectl-enterprise.yaml/badge.svg)](https://github.com/pvnovarese/anchorectl-pipeline/actions/workflows/anchorectl-enterprise.yaml)
+
 This is a very rough demo of integrating Anchore with Jenkins using anchorectl.  
 
 ## Part 1: Jenkins Setup
