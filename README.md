@@ -18,7 +18,7 @@ and we'll need to install jq, python, and anchore-cli in the jenkins container:
  # apk add jq python3 
  # python3 -m ensurepip
  # pip3 install --upgrade pip setuptools anchorecli
- # curl -o /tmp/anchorectl.tar.gz https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.2/anchorectl_0.1.2_linux_amd64.tar.gz
+ # curl -o /tmp/anchorectl.tar.gz https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.3/anchorectl_0.1.3_linux_amd64.tar.gz
  # tar xzvf /tmp/anchorectl.tar.gz --directory /usr/local/bin
  # exit 
 ``` 
