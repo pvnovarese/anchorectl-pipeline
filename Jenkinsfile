@@ -94,8 +94,12 @@ pipeline {
     stage('Analyze Image w/ anchorectl') {
       steps {
         script {
-          // first, analyze with anchorectl and upload sbom to anchore enterprise
-          sh 'anchorectl sbom upload --wait ${REPOSITORY}:${TAG}'
+          // first, create the local json SBOM to be archived, then
+          // analyze with anchorectl and upload sbom to anchore enterprise
+          sh '''
+            anchorectl -o json sbom create ${REPOSITORY}:${TAG} > ${JOB_BASE_NAME}.json
+            anchorectl sbom upload --wait ${REPOSITORY}:${TAG}
+          '''
           // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
           // 
           // (note - at this point the image has not been pushed anywhere)
@@ -148,8 +152,9 @@ pipeline {
     } // end stage "Promote to Prod"
     
     stage('Clean Up') {
-      // delete the images locally
+      // archive the sbom and delete the images locally
       steps {
+        archiveArtifacts artifacts: '*.json'
         sh 'docker rmi ${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG} || failure=1' 
         //
         // the "|| failure=1" at the end of this line just catches problems with the :prod
