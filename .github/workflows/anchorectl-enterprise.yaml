@@ -28,32 +28,28 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
-    - name: Install anchore-cli
-      run: |
-        sudo apt-get install python3-pip
-        pip install anchorecli
-        export PATH="$HOME/.local/bin/:$PATH"
     - name: Install anchorectl
       run: |
-        curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.4/anchorectl_0.1.4_linux_amd64.tar.gz | sudo tar xzvf - -C /usr/local/bin/
-        sudo chmod 0755 /usr/local/bin/anchorectl
+        curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.4/anchorectl_0.1.4_linux_amd64.tar.gz | tar xzvf - -C /$HOME/.local/bin/
+        sudo chmod 0755 /$HOME/.local/bin/anchorectl
+        export PATH="$HOME/.local/bin/:$PATH"
     - name: Build Docker Image
       run: |
         docker build . --file Dockerfile --tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
     - name: Verify Anchore Ready and Reachable
       run: |
-        anchore-cli system status 
+        anchorectl system status 
     - name: Generate SBOM and Push to Anchore
       run: |
-        /usr/local/bin/anchorectl sbom upload --wait --dockerfile ./Dockerfile ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        anchorectl sbom upload --wait --dockerfile ./Dockerfile ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
     - name: Pull Vulnerability List
       run: |
-        anchore-cli image vuln ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} all | tee anchore-vuln.txt
+        anchorectl image vuln ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} all | tee anchore-vuln.txt
     - name: Pull Policy Evaluation
       run: |
         set -o pipefail
         # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
-        anchore-cli evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
+        anchorectl evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
     - name: Re-Tag Image
       run: |
         docker tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
@@ -64,8 +60,8 @@ jobs:
         docker push ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
     - name: Add Promoted Image to Anchore Queue
       run: |
-        anchore-cli image add --noautosubscribe ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
-        anchore-cli image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        anchorectl image add --noautosubscribe ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        anchorectl image wait ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
     - name: Archive Vulnerabilities and Evaluation
       if: always()
       uses: actions/upload-artifact@v2
