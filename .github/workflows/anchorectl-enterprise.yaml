@@ -30,8 +30,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Install anchorectl
       run: |
-        curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.4/anchorectl_0.1.4_linux_amd64.tar.gz | tar xzvf - -C /$HOME/.local/bin/
-        sudo chmod 0755 /$HOME/.local/bin/anchorectl
+        curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.4/anchorectl_0.1.4_linux_amd64.tar.gz | tar xzvf - -C $HOME/.local/bin/
+        sudo chmod 0755 $HOME/.local/bin/anchorectl
         export PATH="$HOME/.local/bin/:$PATH"
     - name: Build Docker Image
       run: |
