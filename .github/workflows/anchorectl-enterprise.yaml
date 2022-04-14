@@ -52,6 +52,7 @@ jobs:
       run: |
         set -o pipefail
         # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
+        # also note that for this step we use anchore-cli, anchorectl doesn't yet have "evaluate check" implemented as of 0.1.4
         anchore-cli evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
     - name: Re-Tag Image
       run: |
