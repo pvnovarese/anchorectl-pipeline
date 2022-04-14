@@ -28,11 +28,13 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
-    - name: Install anchorectl
+    - name: Install Anchore CLI Tools
       run: |
+        sudo apt-get install python3-pip
+        pip install anchorecli
         mkdir -p $HOME/.local/bin
         curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.1.4/anchorectl_0.1.4_linux_amd64.tar.gz | tar xzvf - -C $HOME/.local/bin/
-        sudo chmod 0755 $HOME/.local/bin/anchorectl
+        chmod 0755 $HOME/.local/bin/anchorectl
         export PATH="$HOME/.local/bin/:$PATH"
     - name: Build Docker Image
       run: |
@@ -50,7 +52,7 @@ jobs:
       run: |
         set -o pipefail
         # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
-        anchorectl evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
+        anchore-cli evaluate check --detail ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
     - name: Re-Tag Image
       run: |
         docker tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
