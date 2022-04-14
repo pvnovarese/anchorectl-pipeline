@@ -1,11 +1,13 @@
-# Dockerfile for jenkins/anchore integration demonstration
-FROM alpine:latest
+# Dockerfile for anchorectl demonstration
 
-## good dockerfile pieces
-RUN apk add --no-cache vim
-USER 65534:65534
+# use alpine:latest for a smaller image, but it often won't have any published CVEs
+FROM registry.access.redhat.com/ubi8-minimal:latest
+LABEL maintainer="pvn@novarese.net"
+LABEL name="anchorectl-pipeline"
+LABEL org.opencontainers.image.title="anchorectl-pipeline"
+LABEL org.opencontainers.image.description="Simple image to test anchorectl with Anchore Enterprise."
 
-## bad dockerfile
-#RUN apk add --no-cache sudo curl
-
-CMD /bin/sh
+USER root 
+# use date to force a unique build every time
+RUN date > /image_build_timestamp
+ENTRYPOINT /bin/false
