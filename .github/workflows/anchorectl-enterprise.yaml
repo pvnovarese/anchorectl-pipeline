@@ -10,10 +10,10 @@ on:
   schedule:
     - cron: '38 23 */14 * *'
   workflow_dispatch:
-    branches:
-      - main
-
-  
+    inputs:
+      mode:
+        description: 'Manual Build'  
+        
 jobs:
 
   Build-Scan-Promote:
