@@ -29,14 +29,39 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v2
-    - name: Build Docker Image
-      run: |
-        docker build . --file Dockerfile --tag ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+      
+#    - name: Build Docker Image
+#      run: |
+#        docker build . --file Dockerfile --tag ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: build local container
+      uses: docker/build-push-action@v2
+      with:
+        tags: localbuild/testimage:latest
+        push: false
+        load: true
+        
     - name: Scan image
       uses: anchore/scan-action@v3
       with:
-        image: ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        image: localbuild/testimage:latest
         fail-build: false
+        
+    - name: Inspect SARIF report
+      run: cat ${{ steps.scan.outputs.sarif }}
+
+    - name: Upload Anchore scan SARIF report
+      uses: github/codeql-action/upload-sarif@v1
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+        
+    - name: Tag Docker Image
+      run: |
+        docker tag localbuild/testimage:latest ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        
     - name: Install Anchore CLI Tools
       run: |
         sudo apt-get install python3-pip
@@ -45,12 +70,15 @@ jobs:
         curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.2.0/anchorectl_0.2.0_linux_amd64.tar.gz | tar xzvf - -C $HOME/.local/bin/
         chmod 0755 $HOME/.local/bin/anchorectl
         export PATH="$HOME/.local/bin/:$PATH"
+        
     - name: Verify Anchore Ready and Reachable
       run: |
         anchorectl system status 
+        
     - name: Generate SBOM and Push to Anchore
       run: |
         anchorectl sbom upload --wait --dockerfile ./Dockerfile ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        
     - name: Pull Vulnerability List
       run: |
         anchorectl image vuln ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} all | tee anchore-vuln.txt
@@ -60,18 +88,23 @@ jobs:
         # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
         # also note that for this step we use anchore-cli, anchorectl doesn't yet have "evaluate check" implemented as of 0.1.4
         anchore-cli evaluate check --detail ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} | tee anchore-policy.txt
+
     - name: Re-Tag Image
       run: |
         docker tag ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA} ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+
     - name: Login to ghcr.io
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdin
+      
     - name: Push Docker Image
       run: |
         docker push ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        
     - name: Add Promoted Image to Anchore Queue
       run: |
         anchorectl image add --noautosubscribe ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
         anchorectl image wait ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_REF_NAME}
+        
     - name: Archive Vulnerabilities and Evaluation
       if: always()
       uses: actions/upload-artifact@v2
