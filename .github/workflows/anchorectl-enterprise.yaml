@@ -39,6 +39,10 @@ jobs:
     - name: Build Docker Image
       run: |
         docker build . --file Dockerfile --tag ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+    - name: Scan image
+      uses: anchore/scan-action@v3
+      with:
+        image: "localbuild/testimage:latest"
     - name: Verify Anchore Ready and Reachable
       run: |
         anchorectl system status 
