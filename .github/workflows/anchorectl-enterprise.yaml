@@ -49,6 +49,8 @@ jobs:
       with:
         image: localbuild/testimage:latest
         fail-build: false
+        severity-cutoff: critical
+        acs-report-enable: true
         
     - name: Inspect SARIF report
       run: cat ${{ steps.scan.outputs.sarif }}
