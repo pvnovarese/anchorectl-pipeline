@@ -35,7 +35,8 @@ jobs:
     - name: Scan image
       uses: anchore/scan-action@v3
       with:
-        image: "${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}"
+        image: ${IMAGE_REGISTRY}/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}
+        fail-build: false
     - name: Install Anchore CLI Tools
       run: |
         sudo apt-get install python3-pip
