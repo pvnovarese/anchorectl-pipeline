@@ -111,8 +111,14 @@ jobs:
     # still need anchore-cli for subscription operations
     - name: Purge Unneeded Evaluation
       run: |
-        anchorectl image delete ${IMAGE_SHA}
         anchore-cli subscription list --full | grep ${GITHUB_SHA} | awk '{print $4}' | xargs -n 1 anchore-cli subscription del
+        anchorectl image delete ${IMAGE_SHA}
+    
+    ## optional, if you want continuous re-evaluations
+    ## still need anchore-cli for subscription operations
+    #- name: Activate Subscriptions
+    #    anchore-cli subscription activate policy_eval ${IMAGE}
+    #    anchore-cli subscription activate vuln_update ${IMAGE}    
         
     - name: Archive Vulnerabilities and Evaluation
       if: always()
