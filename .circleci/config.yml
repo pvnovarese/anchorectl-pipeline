@@ -1,0 +1,101 @@
+version: 2
+jobs:
+
+  ### the following variables have been set in the "anchore" context
+  ###
+  ### ANCHORECTL_USERNAME
+  ### ANCHORECTL_PASSWORD
+  ### ANCHORECTL_URL
+  ### 
+  ### see anchorectl docs for more info 
+  ### https://docs.anchore.com/current/docs/using/anchorectl_usage/
+  ### https://docs.anchore.com/current/docs/deployment/anchorectl/
+  ###
+  ### also in this context there is
+  ### ANCHORE_FAIL_ON_POLICY 
+  ### which is used to control whether to break pipeline if there
+  ### is a policy violation (see scan step below)
+  
+  ### things to do:
+  ### 1)  is there a way to set global variables (constructed from other variables) in circleci?
+  ###     e.g. in codefresh we can "cf_export ANCHORE_REPO=${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
+  ###     and use that across steps rather than defining IMAGE in each step.
+  ### 2)  there's currently no "promote" step as in other example pipelines in this repo
+  ### 3)  after promoting, optionally add subscriptions for vuln_update and policy_eval etc.
+
+  build:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: Build and push Docker image
+          command: |
+            ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
+            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
+            source $BASH_ENV
+            ### login to docker hub, change to whatever registry you're using
+            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+            ### build and push
+            docker build --pull --no-cache -t $IMAGE .
+            docker push $IMAGE  
+            
+  scan:
+    docker:
+      - image: docker.io/pvnovarese/anchore-tools:main
+    steps:
+      - checkout
+      - run:
+          name: Anchore Scan
+          command: |
+            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
+            source $BASH_ENV
+            ### this sometimes helps for troubleshooting, comment out if you're having issues
+            # anchorectl -v system status
+            #
+            ### add image locally, wait for analysis.  You can skip the --wait if you don't want the analysis
+            #            
+            syft -o json packages ${IMAGE} | anchorectl image add --wait --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
+            #
+            ### pull policy evaluation details.  Set ANCHORE_FAIL_ON_POLICY if you want to break pipeline for a policy violation here.
+            if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
+              anchorectl image check --detail --fail-based-on-results $IMAGE ; 
+            else 
+              anchorectl image check --detail $IMAGE ; 
+            fi
+workflows:
+  version: 2
+  build_scan:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - main
+          context:
+            - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
+      - scan:
+          filters:
+            branches:
+              only:
+                - main
+          context:
+            - anchore
+          requires:
+            - build
+  weekly:
+    triggers: #use the triggers key to indicate a scheduled build
+      - schedule:
+          cron: "0 18 * * 2" # tuesday at 18:00
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - build:
+         context:
+           - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
+      - scan:
+          context:
+           - anchore
+          requires:
+            - build
