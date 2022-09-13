@@ -37,7 +37,8 @@ jobs:
             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
             ### build and push
             docker build --pull --no-cache -t $IMAGE .
-            docker push $IMAGE  
+            ### don't need to push, we're going to scan locally
+            #docker push $IMAGE  
             
   scan:
     docker:
@@ -53,7 +54,9 @@ jobs:
             ### this sometimes helps for troubleshooting, comment out if you're having issues
             echo "Checkpoint: tool verification"
             anchorectl -v system status
+            docker image ls
             syft --version
+            syft ${IMAGE}
             syft packages ${IMAGE}
             #
             ### add image locally, wait for analysis.  You can skip the --wait if you don't want the analysis
