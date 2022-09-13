@@ -46,8 +46,7 @@ jobs:
             docker run \
                  -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD \
                  pvnovarese/anchore-tools:main \
-                 /bin/bash syft -o json packages ${IMAGE} | \
-                 anchorectl image add --from - --wait --annotation build_tool=circleci ${IMAGE}
+                 /bin/bash -c "syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --annotation build_tool=circleci ${IMAGE}"
 
 
 
