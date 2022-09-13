@@ -116,7 +116,7 @@ workflows:
           context:
             - anchore
           requires:
-            - build
+            - build-push
   weekly:
     triggers: #use the triggers key to indicate a scheduled build
       - schedule:
@@ -133,4 +133,4 @@ workflows:
           context:
            - anchore
           requires:
-            - build
+            - build-push
