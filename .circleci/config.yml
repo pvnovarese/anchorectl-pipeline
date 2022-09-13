@@ -54,7 +54,7 @@ jobs:
             #
             ### add image locally, wait for analysis.  You can skip the --wait if you don't want the analysis
             #            
-            syft -o json packages ${IMAGE} | anchorectl image add --wait --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
+            syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
             #
             ### pull policy evaluation details.  Set ANCHORE_FAIL_ON_POLICY if you want to break pipeline for a policy violation here.
             if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
