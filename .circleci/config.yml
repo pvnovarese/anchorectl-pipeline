@@ -47,11 +47,14 @@ jobs:
       - run:
           name: Anchore Scan
           command: |
-            echo "checkpoint: constructing IMAGE variable"
             echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
             source $BASH_ENV
+            echo "Checkpoint: IMAGE variable is "${IMAGE}
             ### this sometimes helps for troubleshooting, comment out if you're having issues
+            echo "Checkpoint: tool verification"
             anchorectl -v system status
+            syft --version
+            syft packages ${IMAGE}
             #
             ### add image locally, wait for analysis.  You can skip the --wait if you don't want the analysis
             #
