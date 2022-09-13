@@ -39,11 +39,17 @@ jobs:
             docker build --pull --no-cache -t $IMAGE .
             ### don't need to push, we're going to scan locally
             #docker push $IMAGE  
-            
+            #
+            ### diagnostics:
+            docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main anchorectl -v system status
+            docker image ls
+
   scan:
     docker:
       - image: docker.io/pvnovarese/anchore-tools:main
     steps:
+      - setup_remote_docker:
+          version: 20.10.14
       - checkout
       - run:
           name: Anchore Scan
@@ -54,7 +60,6 @@ jobs:
             ### this sometimes helps for troubleshooting, comment out if you're having issues
             echo "Checkpoint: tool verification"
             anchorectl -v system status
-            docker image ls
             syft --version
             syft ${IMAGE}
             syft packages ${IMAGE}
