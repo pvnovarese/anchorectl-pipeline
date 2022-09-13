@@ -45,8 +45,17 @@ jobs:
             ### scan the image with syft and then upload the SBOM with anchorectl
             docker run \
                  -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD \
+                 -v /home/circleci/project/Dockerfile:/tmp/Dockerfile \
                  pvnovarese/anchore-tools:main \
-                 /bin/bash -c "syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --annotation build_tool=circleci ${IMAGE}"
+                 /bin/bash -c "syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile /tmp/Dockerfile --force --annotation build_tool=circleci ${IMAGE}"
+            ### pull policy evaluation details.  Set ANCHORE_FAIL_ON_POLICY if you want to break pipeline for a policy violation here.
+            if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
+              docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
+              anchorectl image check --detail --fail-based-on-results $IMAGE ; 
+            else 
+              docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
+              anchorectl image check --detail $IMAGE ; 
+            fi
 
 
 
