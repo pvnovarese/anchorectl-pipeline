@@ -33,52 +33,63 @@ jobs:
             ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
             echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
             source $BASH_ENV
+            echo "diagnostic: current working directory is "$PWD
+            ls -l
+            #
             ### login to docker hub, change to whatever registry you're using
             echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-            ### build and push
+            #
+            ### build image
             docker build --pull --no-cache -t $IMAGE .
-            ### don't need to push, we're going to scan locally
-            #docker push $IMAGE  
             #
-            ### diagnostics:
-            docker image ls
+            ### scan the image with syft and then upload the SBOM with anchorectl
+            docker run \
+                 -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD \
+                 pvnovarese/anchore-tools:main \
+                 /bin/bash syft -o json packages ${IMAGE} | \
+                 anchorectl image add --from - --wait --annotation build_tool=circleci ${IMAGE}
 
-  scan:
-    machine: true
-    steps:
-      - checkout
-      - run:
-          name: Anchore Scan
-          command: |
-            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
-            source $BASH_ENV
-            echo "Checkpoint: IMAGE variable is "${IMAGE}
-            ### this sometimes helps for troubleshooting, comment out if you're having issues
-            echo "Checkpoint: tool verification"
-            docker image ls
-            docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main anchorectl -v system status
-            docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main syft --version
-            docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main syft ${IMAGE}
-            docker image ls
-            docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main syft packages ${IMAGE}
-            #
-            ### add image locally, wait for analysis.  You can skip the --wait if you don't want the analysis
-            #
-            ### something about piping syft directly into anchorectl triggers a bug in CircleCI
-            #syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
-            #
-            ### instead, for now, I'll just write the sbom to a file and then upload that.
-            #echo "checkpoint: writing sbom with syft"
-            #syft -o json --file sbom.json packages ${IMAGE}
-            #echo "checkpoint: uploading sbom with anchorectl"
-            #anchorectl image add --wait --from sbom.json --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
-            #
-            ### pull policy evaluation details.  Set ANCHORE_FAIL_ON_POLICY if you want to break pipeline for a policy violation here.
-            #if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
-            #  anchorectl image check --detail --fail-based-on-results $IMAGE ; 
-            #else 
-            #  anchorectl image check --detail $IMAGE ; 
-            #fi
+
+
+
+
+#   scan:
+#     machine: true
+#     steps:
+#       - checkout
+#       - run:
+#           name: Anchore Scan
+#           command: |
+#             echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
+#             source $BASH_ENV
+#             echo "Checkpoint: IMAGE variable is "${IMAGE}
+#             ### this sometimes helps for troubleshooting, comment out if you're having issues
+#             echo "Checkpoint: tool verification"
+#             docker image ls
+#             docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main anchorectl -v system status
+#             docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main syft --version
+#             docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main syft ${IMAGE}
+#             docker image ls
+#             docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main /bin/bash -c \
+#                  syft packages ${IMAGE} | 
+#             #
+#             ### add image locally, wait for analysis.  You can skip the --wait if you don't want the analysis
+#             #
+#             ### something about piping syft directly into anchorectl triggers a bug in CircleCI
+#             #syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
+#             #
+#             ### instead, for now, I'll just write the sbom to a file and then upload that.
+#             #echo "checkpoint: writing sbom with syft"
+#             #syft -o json --file sbom.json packages ${IMAGE}
+#             #echo "checkpoint: uploading sbom with anchorectl"
+#             #anchorectl image add --wait --from sbom.json --dockerfile ./Dockerfile --force --annotation build_tool=circleci ${IMAGE}
+#             #
+#             ### pull policy evaluation details.  Set ANCHORE_FAIL_ON_POLICY if you want to break pipeline for a policy violation here.
+#             #if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
+#             #  anchorectl image check --detail --fail-based-on-results $IMAGE ; 
+#             #else 
+#             #  anchorectl image check --detail $IMAGE ; 
+#             #fi
             
 workflows:
   version: 2
@@ -91,15 +102,15 @@ workflows:
                 - main
           context:
             - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
-      - scan:
-          filters:
-            branches:
-              only:
-                - main
-          context:
-            - anchore
-          requires:
-            - build
+#       - scan:
+#           filters:
+#             branches:
+#               only:
+#                 - main
+#           context:
+#             - anchore
+#           requires:
+#             - build
   weekly:
     triggers: #use the triggers key to indicate a scheduled build
       - schedule:
@@ -112,8 +123,8 @@ workflows:
       - build:
          context:
            - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
-      - scan:
-          context:
-           - anchore
-          requires:
-            - build
+#       - scan:
+#           context:
+#            - anchore
+#           requires:
+#             - build
