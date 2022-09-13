@@ -20,8 +20,7 @@ jobs:
   ### 1)  is there a way to set global variables (constructed from other variables) in circleci?
   ###     e.g. in codefresh we can "cf_export ANCHORE_REPO=${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}"
   ###     and use that across steps rather than defining IMAGE in each step.
-  ### 2)  there's currently no "promote" step as in other example pipelines in this repo
-  ### 3)  after promoting, optionally add subscriptions for vuln_update and policy_eval etc.
+  ### 2)  after promoting, optionally add subscriptions for vuln_update and policy_eval etc.
 
   build-push:
     machine: true
