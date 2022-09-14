@@ -38,18 +38,20 @@ jobs:
             ### build image
             docker build --pull --no-cache -t $IMAGE .
       - run:
-          name: Diagnostics
+          name: Install Anchore Tools
           command: |
-            pwd
-            whoami
-            echo "home: "${HOME}
-            echo "path: "${PATH}
+            #
+            ### this step is really not necessary, you can run these tools directly from my pvnovarese/anchore-tools:main
+            ### image, but if you don't want to run random people's images, you can install these dirctly (there is an
+            ### image for syft that Anchore officially maintains, but not one for anchorectl (yet).
+            #
             curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin
             curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin
             export PATH=${HOME}/.local/bin/:${PATH}
       - run:
           name: Test Docker image
           command: |
+            echo "DEBUG: path: "${PATH}
             #
             ### generate SBOM with syft and then upload the SBOM with anchorectl
             ### note if you don't care about the Dockerfile you can skip the -v mount
