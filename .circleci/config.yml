@@ -64,7 +64,7 @@ jobs:
             ### the --force option either.
             #
             syft -vv -o json --file /tmp/sbom.json packages ${IMAGE} 
-            anchorectl -vv image add --from /tmp/sbom.json --wait --dockerfile /tmp/Dockerfile --force --annotation build_tool=circleci ${IMAGE}
+            anchorectl -vv image add --from /tmp/sbom.json --wait --dockerfile Dockerfile --force --annotation build_tool=circleci ${IMAGE}
             #
             ### alternative to downloading syft directly, you can just use the containerized version
             ### or in this case, my anchore-tools image that has syft, grype, anchorectl plus some
