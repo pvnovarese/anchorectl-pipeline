@@ -47,8 +47,8 @@ jobs:
             ### image, but if you don't want to run random people's images, you can install these dirctly (there is an
             ### image for syft that Anchore officially maintains, but not one for anchorectl (yet).
             #
-            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin
-            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin 1.0.0
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin 0.55.0
             echo 'export PATH=${HOME}/.local/bin/:${PATH}' >> ${BASH_ENV}
             source ${BASH_ENV}
       - run:
