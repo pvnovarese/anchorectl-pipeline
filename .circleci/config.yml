@@ -31,12 +31,22 @@ jobs:
           command: |
             ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
             echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
-            source $BASH_ENV
+            source ${BASH_ENV}
       - run:
           name: Build Docker image
           command: |
             ### build image
             docker build --pull --no-cache -t $IMAGE .
+      - run:
+          name: Diagnostics
+          command: |
+            pwd
+            whoami
+            echo "home: "${HOME}
+            echo "path: "${PATH}
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b ${HOME}/.local/bin
+            curl -sSfL  https://anchorectl-releases.anchore.io/syft/install.sh  | sh -s -- -b ${HOME}/.local/bin
+            export PATH=${HOME}/.local/bin/:${PATH}
       - run:
           name: Test Docker image
           command: |
@@ -46,8 +56,6 @@ jobs:
             ### and if you remove the --dockerfile option you also probably won't need 
             ### the --force option either.
             #
-            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b /usr/local/bin
-            curl -sSfL  https://anchorectl-releases.anchore.io/syft/install.sh  | sh -s -- -b /usr/local/bin
             syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile /tmp/Dockerfile --force --annotation build_tool=circleci ${IMAGE}
             #
             ### alternative to downloading syft directly, you can just use the containerized version
@@ -66,11 +74,11 @@ jobs:
             if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
               ### uncomment this line to use the container image instead of directly-installed anchorectl
               # docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
-              anchorectl image check --detail --fail-based-on-results $IMAGE ; 
+              anchorectl image check --detail --fail-based-on-results ${IMAGE} ; 
             else 
               ### uncomment this line to use the container image instead of directly-installed anchorectl
               # docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
-              anchorectl image check --detail $IMAGE ; 
+              anchorectl image check --detail ${IMAGE} ; 
             fi
       - run:
           name: Push Docker image
@@ -81,11 +89,11 @@ jobs:
             #
             ### login to docker hub, change to whatever registry you're using
             #
-            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+            echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
             #
             ### now the push
             #
-            docker push $IMAGE  
+            docker push ${IMAGE}  
 
   examine:
     docker:
