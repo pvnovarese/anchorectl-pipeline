@@ -44,8 +44,8 @@ jobs:
             whoami
             echo "home: "${HOME}
             echo "path: "${PATH}
-            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b ${HOME}/.local/bin
-            curl -sSfL  https://anchorectl-releases.anchore.io/syft/install.sh  | sh -s -- -b ${HOME}/.local/bin
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin
             export PATH=${HOME}/.local/bin/:${PATH}
       - run:
           name: Test Docker image
