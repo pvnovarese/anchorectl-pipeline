@@ -32,7 +32,7 @@ jobs:
             echo "DEBUG: bash_env: "
             env
             ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
-            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
+            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> ${BASH_ENV}
             source ${BASH_ENV}
       - run:
           name: Build Docker image
@@ -49,7 +49,8 @@ jobs:
             #
             curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin
             curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin
-            export PATH=${HOME}/.local/bin/:${PATH}
+            echo 'export PATH=${HOME}/.local/bin/:${PATH}' >> ${BASH_ENV}
+            source ${BASH_ENV}
       - run:
           name: Test Docker image
           command: |
