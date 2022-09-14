@@ -29,6 +29,7 @@ jobs:
       - run: 
           name: Set Environment
           command: |
+            echo "DEBUG: bash_env: "${BASH_ENV}
             ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
             echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
             source ${BASH_ENV}
@@ -52,6 +53,7 @@ jobs:
           name: Test Docker image
           command: |
             echo "DEBUG: path: "${PATH}
+            echo "DEBUG: bash_env: "${BASH_ENV}
             #
             ### generate SBOM with syft and then upload the SBOM with anchorectl
             ### note if you don't care about the Dockerfile you can skip the -v mount
@@ -96,6 +98,14 @@ jobs:
             ### now the push
             #
             docker push ${IMAGE}  
+            
+  debug:
+    machine: true
+    steps:
+      - run: 
+          name: Bash Env
+          command: |
+            echo "DEBUG: bash_env: "${BASH_ENV}
 
   examine:
     docker:
@@ -129,6 +139,16 @@ workflows:
                 - test
           context:
             - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
+      - debug:
+          filters:
+            branches:
+              ignore:
+                - scratch
+                - test
+          context:
+            - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
+          requires:
+            - build-push
       - examine:
           filters:
             branches:
