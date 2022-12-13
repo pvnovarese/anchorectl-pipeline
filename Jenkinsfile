@@ -126,7 +126,7 @@ pipeline {
           // now let's get the evaluation
           //
           try {
-            sh 'anchore-cli evaluate check ${REPOSITORY}:${TAG}'
+            sh 'anchorectl image check ${REPOSITORY}:${TAG}'
             // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
             //
           } catch (err) {
