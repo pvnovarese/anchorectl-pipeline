@@ -104,9 +104,16 @@ pipeline {
           // first, create the local json SBOM to be archived, then
           // analyze with anchorectl and upload sbom to anchore enterprise
           sh '''
-            #anchorectl -o json sbom create ${REPOSITORY}:${TAG} > ${JOB_BASE_NAME}.json
-            #anchorectl sbom upload --wait ${REPOSITORY}:${TAG}
+            #### we installed anchorectl locally, PATH gets reset in each stage
+            export PATH="$HOME/.local/bin/:$PATH"
             anchorectl image add --wait ${REPOSITORY}:${TAG}
+            ###
+            ### alternatively you can use syft to generate the sbom locally and push the sbom to the Anchore Enterprise API:
+            #
+            #  syft -o json packages ${REPOSITORY}:${TAG} | anchorectl image add --wait --dockerfile ./Dockerfile ${REPOSITORY}:${TAG} --from -
+            #
+            ### note in this case you don't need to push the image first
+            ###
           '''
           // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
           // 
