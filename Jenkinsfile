@@ -62,9 +62,16 @@ pipeline {
     stage('Verify Tools') {
       steps {
         sh """
-          which docker
-          which anchore-cli
+          ### install syft (for local SPDX/CycloneDX sbom generation, this will be implemented directly in anchorctl in the future as well)
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b $HOME/.local/bin
+          ### install anchorectl 
+          curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin
+          chmod 0755 $HOME/.local/bin/anchorectl
+          export PATH="$HOME/.local/bin/:$PATH"
+          ### now make sure it all works
+          which syft
           which anchorectl
+          which docker
           """
       } // end steps
     } // end stage "Verify Tools"
