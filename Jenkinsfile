@@ -126,7 +126,10 @@ pipeline {
           // now let's get the evaluation
           //
           try {
-            sh 'anchorectl image check ${REPOSITORY}:${TAG}'
+            sh '''
+              export PATH="$HOME/.local/bin/:$PATH"
+              anchorectl image check ${REPOSITORY}:${TAG}
+            '''
             // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
             //
           } catch (err) {
