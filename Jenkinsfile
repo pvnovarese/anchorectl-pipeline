@@ -98,7 +98,7 @@ pipeline {
           sh """
             #### we installed anchorectl locally, PATH gets reset in each stage
             export PATH="$HOME/.local/bin/:$PATH"
-            anchorectl image add --wait --no-auto-subscribe --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
+            anchorectl image add --wait --no-auto-subscribe --annotation build_tool=jenkins --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
             ###
             ### alternatively you can use syft to generate the sbom locally and push the sbom to the Anchore Enterprise API:
             #
@@ -156,7 +156,7 @@ pipeline {
             docker push ${REGISTRY}/${REPOSITORY}:${PASSTAG}
             echo ${REGISTRY}/${REPOSITORY}:${PASSTAG} > anchore_images
             """
-          anchore name: 'anchore_images'
+          anchore name: 'anchore_images', annotations: [[key: 'build_tool', value: 'jenkins']]
         } // end script
       } // end steps
     } // end stage "Promote to Prod"
