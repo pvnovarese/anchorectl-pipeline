@@ -99,7 +99,7 @@ pipeline {
           sh """
             #### we installed anchorectl locally, PATH gets reset in each stage
             export PATH="$HOME/.local/bin/:$PATH"
-            anchorectl image add --wait --no-auto-subscribe --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
+            anchorectl image add --wait --no-auto-subscribe --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
             ###
             ### alternatively you can use syft to generate the sbom locally and push the sbom to the Anchore Enterprise API:
             #
