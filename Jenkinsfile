@@ -1,6 +1,5 @@
-// requires anchore-cli https://github.com/anchore/anchore-cli
 // requires anchorectl
-// requires anchore engine or anchore enterprise 
+// requires anchore enterprise 
 //
 pipeline {
   environment {
@@ -65,7 +64,6 @@ pipeline {
           which syft
           which anchorectl
           which docker
-          env > env.txt
           """
         archiveArtifacts artifacts: 'env.txt'
       } // end steps
