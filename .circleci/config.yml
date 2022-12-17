@@ -58,8 +58,9 @@ jobs:
       - run:
           name: Test Docker image
           command: |
-            echo "testing connectivity"
-            anchorectl system status
+            ### this is sometimes useful for debugging
+            #echo "testing connectivity"
+            #anchorectl system status
             #
             ### generate SBOM with syft and then upload the SBOM with anchorectl
             ### note if you don't care about the Dockerfile you can skip the -v mount
