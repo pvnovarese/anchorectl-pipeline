@@ -67,7 +67,7 @@ jobs:
             ### the --force option either.
             #
             set -o pipefail
-            syft -o json packages ${IMAGE} | anchorectl image add --no-auto-subscribe --dockerfile Dockerfile --force --wait --annotation build_tool=circleci ${IMAGE} --from -
+            syft -v -o json packages ${IMAGE} | anchorectl image add --no-auto-subscribe --dockerfile Dockerfile --force --wait --annotation build_tool=circleci ${IMAGE} --from -
             #
             ### alternative to downloading syft directly, you can just use the containerized version
             ### or in this case, my anchore-tools image that has syft, grype, anchorectl plus some
