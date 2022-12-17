@@ -65,7 +65,6 @@ pipeline {
           which anchorectl
           which docker
           """
-        archiveArtifacts artifacts: 'env.txt'
       } // end steps
     } // end stage "Verify Tools"
     
