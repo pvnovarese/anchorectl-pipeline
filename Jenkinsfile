@@ -65,7 +65,9 @@ pipeline {
           which syft
           which anchorectl
           which docker
+          env > env.txt
           """
+        archiveArtifacts artifacts: 'env.txt'
       } // end steps
     } // end stage "Verify Tools"
     
