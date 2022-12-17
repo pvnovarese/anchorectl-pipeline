@@ -24,12 +24,6 @@ jobs:
       ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
       ## set ANCHORECTL_FAIL_BASED_ON_RESULTS to true if you want to break the pipeline based on the evaluation
       ANCHORECTL_FAIL_BASED_ON_RESULTS: false
-      #ANCHORECTL_ANCHORE_USER: ${{ secrets.ANCHORE_CLI_USER }}
-      #ANCHORECTL_ANCHORE_PASSWORD: ${{ secrets.ANCHORE_CLI_PASS }}
-      #ANCHORECTL_ANCHORE_URL: ${{ secrets.ANCHORECTL_ANCHORE_URL }}
-      #ANCHORE_CLI_USER: ${{ secrets.ANCHORE_CLI_USER }}
-      #ANCHORE_CLI_PASS: ${{ secrets.ANCHORE_CLI_PASS }}
-      #ANCHORE_CLI_URL: ${{ secrets.ANCHORE_CLI_URL }}
       IMAGE_REGISTRY: ghcr.io
 
     steps:
@@ -75,11 +69,6 @@ jobs:
                 
     - name: Install Anchore CLI Tools
       run: |
-        #sudo apt-get install python3-pip
-        #pip install anchorecli
-        #mkdir -p $HOME/.local/bin
-        #curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.2.0/anchorectl_0.2.0_linux_amd64.tar.gz | tar xzvf - -C $HOME/.local/bin/
-        #chmod 0755 $HOME/.local/bin/anchorectl
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.3.0
         curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.63.0
         export PATH="${HOME}/.local/bin/:${PATH}"
@@ -127,10 +116,11 @@ jobs:
       run: |
         anchorectl image add --no-auto-subscribe --wait ${IMAGE}
     
-    - name: Purge Unneeded Evaluation
-      run: |
-        #anchore-cli subscription list --full | grep ${GITHUB_SHA} | awk '{print $4}' | xargs -n 1 anchore-cli subscription del
-        anchorectl image delete ${IMAGE_SHA}
+    ### I've commented this out because the credential I use for this demo only has the "image-analyzer" role
+    ### which doesn't allow "image delete" - if you want to clean this up you'll need at least read-write role.
+    #- name: Purge Unneeded Evaluation
+    #  run: |
+    #    anchorectl image delete ${IMAGE_SHA}
     
     ## optional, if you want continuous re-evaluations
     #- name: Activate Subscriptions
