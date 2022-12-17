@@ -29,14 +29,29 @@ jobs:
       - run: 
           name: Set Environment
           command: |
+            echo "DEBUG: bash_env: "
+            env
             ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
-            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
-            source $BASH_ENV
+            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> ${BASH_ENV}
+            ### you don't need this if you're using the containerized tools but it won't hurt to leave this
+            echo 'export PATH=${HOME}/.local/bin/:${PATH}' >> ${BASH_ENV}
+            source ${BASH_ENV}
       - run:
           name: Build Docker image
           command: |
             ### build image
             docker build --pull --no-cache -t $IMAGE .
+      - run:
+          name: Install Anchore Tools
+          command: |
+            #
+            ### this step is really not necessary, you can run these tools directly from my pvnovarese/anchore-tools:main
+            ### image, but if you don't want to run random people's images, you can install these dirctly (there is an
+            ### image for syft that Anchore officially maintains, but not one for anchorectl (yet).
+            #
+            set -o pipefail
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.0.0
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.55.0
       - run:
           name: Test Docker image
           command: |
@@ -46,20 +61,30 @@ jobs:
             ### and if you remove the --dockerfile option you also probably won't need 
             ### the --force option either.
             #
-            docker run \
-                 -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD \
-                 -v /home/circleci/project/Dockerfile:/tmp/Dockerfile \
-                 pvnovarese/anchore-tools:main \
-                 /bin/bash -c "syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile /tmp/Dockerfile --force --annotation build_tool=circleci ${IMAGE}"
+            set -o pipefail
+            syft -v -o json packages ${IMAGE} | anchorectl -v image add --from - --wait --dockerfile Dockerfile --force --annotation build_tool=circleci ${IMAGE}
+            #
+            ### alternative to downloading syft directly, you can just use the containerized version
+            ### or in this case, my anchore-tools image that has syft, grype, anchorectl plus some
+            ### other common tools.
+            #
+            #docker run \
+            #     -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD \
+            #     -v /home/circleci/project/Dockerfile:/tmp/Dockerfile \
+            #     pvnovarese/anchore-tools:main \
+            #     /bin/bash -c "syft -o json packages ${IMAGE} | anchorectl image add --from - --wait --dockerfile /tmp/Dockerfile --force --annotation build_tool=circleci ${IMAGE}"
             #     
             ### test policy evaluation.  Set ANCHORE_FAIL_ON_POLICY if you want to break pipeline for a policy violation here.
+            ### note these could also be run from the anchore-tools 
             #
             if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
-              docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
-              anchorectl image check --detail --fail-based-on-results $IMAGE ; 
+              ### uncomment this line to use the container image instead of directly-installed anchorectl
+              # docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
+              anchorectl image check --detail --fail-based-on-results ${IMAGE} ; 
             else 
-              docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
-              anchorectl image check --detail $IMAGE ; 
+              ### uncomment this line to use the container image instead of directly-installed anchorectl
+              # docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
+              anchorectl image check --detail ${IMAGE} ; 
             fi
       - run:
           name: Push Docker image
@@ -70,12 +95,12 @@ jobs:
             #
             ### login to docker hub, change to whatever registry you're using
             #
-            echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+            echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
             #
-            ### push
+            ### now the push
             #
-            docker push $IMAGE  
-
+            docker push ${IMAGE}  
+            
   examine:
     docker:
       - image: docker.io/pvnovarese/anchore-tools:main
@@ -98,13 +123,14 @@ jobs:
             
 workflows:
   version: 2
-  build_scan:
+  enterprise:
     jobs:
       - build-push:
           filters:
             branches:
-              only:
-                - main
+              ignore:
+                - scratch
+                - test
           context:
             - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
       - examine:
