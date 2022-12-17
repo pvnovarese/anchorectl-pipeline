@@ -8,7 +8,7 @@ pipeline {
     //
     // we don't need registry if using docker hub
     // but if you're using a different registry, set this 
-    // REGISTRY = 'registry.hub.docker.com'
+    REGISTRY = 'docker.io'
     //
     //
     // you will need a credential with your docker hub user/pass
@@ -59,14 +59,13 @@ pipeline {
       } // end steps
     } // end stage "checkout scm"
     
-    stage('Verify Tools') {
+    stage('Install and Verify Tools') {
       steps {
         sh """
           ### install syft (for local SPDX/CycloneDX sbom generation, this will be implemented directly in anchorctl in the future as well)
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b $HOME/.local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b $HOME/.local/bin v0.63.0
           ### install anchorectl 
-          curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin
-          chmod 0755 $HOME/.local/bin/anchorectl
+          curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v1.3.0
           export PATH="$HOME/.local/bin/:$PATH"
           ### now make sure it all works
           which syft
@@ -84,10 +83,10 @@ pipeline {
           // then push it to docker hub (or whatever registry)
           //
           sh """
-            docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
-            docker build -t ${REPOSITORY}:${TAG} --pull -f ./Dockerfile .
+            echo "${DOCKER_HUB_PSW}" | docker login ${REGISTRY} -u ${DOCKER_HUB_USR} --password-stdin
+            docker build -t ${REGISTRY}/${REPOSITORY}:${TAG} --pull -f ./Dockerfile .
             # we don't need to push since we're using anchorectl, but if you wanted to you could do this:
-            docker push ${REPOSITORY}:${TAG}
+            docker push ${REGISTRY}/${REPOSITORY}:${TAG}
           """
           // I don't like using the docker plugin but if you want to use it, here ya go
           // DOCKER_IMAGE = docker.build REPOSITORY + ":" + TAG
@@ -103,42 +102,42 @@ pipeline {
         script {
           // first, create the local json SBOM to be archived, then
           // analyze with anchorectl and upload sbom to anchore enterprise
-          sh '''
+          sh """
             #### we installed anchorectl locally, PATH gets reset in each stage
             export PATH="$HOME/.local/bin/:$PATH"
-            anchorectl image add --wait ${REPOSITORY}:${TAG}
+            anchorectl image add --wait --Dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
             ###
             ### alternatively you can use syft to generate the sbom locally and push the sbom to the Anchore Enterprise API:
             #
-            #  syft -o json packages ${REPOSITORY}:${TAG} | anchorectl image add --wait --dockerfile ./Dockerfile ${REPOSITORY}:${TAG} --from -
+            #  syft -o json packages ${REGISTRY}/${REPOSITORY}:${TAG} | anchorectl image add --wait --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG} --from -
             #
             ### note in this case you don't need to push the image first
             ###
-          '''
-          // sh '/usr/bin/anchore-cli --url ${ANCHORE_URL} --u ${ANCHORE_USR} --p ${ANCHORE_PSW} image wait --timeout 120 --interval 2 ${REPOSITORY}:${BUILD_NUMBER}'
+          """
           // 
           // (note - at this point the image has not been pushed anywhere)
           //
-          // we do the "image wait" to wait for analysis to complete (even though we generated the sbom locally, 
+          // we use "--wait" to wait for analysis to complete (even though we generated the sbom locally, 
           // the backend analyzer still has some work to do - it validates the uploaded sbom and inserts it into 
           // the catalog, plus it will do an initial policy evaluation etc.
           // 
           // now let's get the evaluation
           //
           try {
-            sh '''
+            sh """
               export PATH="$HOME/.local/bin/:$PATH"
-              anchorectl image check ${REPOSITORY}:${TAG}
-            '''
-            // if you want the FULL details of the policy evaluation (which can be quite long), use "evaluate check --detail" instead
+              ### remove "--fail-based-on-results" if you don't care about the pass/fail policy evaulation
+              anchorectl image check --fail-based-on-results ${REGISTRY}/${REPOSITORY}:${TAG}
+            """
+            // if you want the FULL details of the policy evaluation (which can be quite long), use "image check --detail" instead
             //
           } catch (err) {
             // if evaluation fails, clean up (delete the image) and fail the build
             sh """
-              docker rmi ${REPOSITORY}:${TAG}
+              docker rmi ${REGISTRY}/${REPOSITORY}:${TAG}
               # optional: grab the evaluation with the anchore plugin so we can archive it
-              # echo ${REPOSITORY}:${TAG} > anchore_images
-              # this doesn't actually work because we didn't push the image and the 
+              # echo ${REGISTRY}/${REPOSITORY}:${TAG} > anchore_images
+              # this doesn't actually work if we didn't push the image and the 
               # plug-in automatically does an "image add" which fails.
               exit 1
             """
@@ -159,21 +158,25 @@ pipeline {
           // 1. use anchorectl to add the PASSTAG tag to the catalog - no need to wait for evaluation
           // 2. use anchore plugin to add the PASSTAG tag and grab the evaluation report
           sh """
-            docker login -u ${DOCKER_HUB_USR} -p ${DOCKER_HUB_PSW}
-            docker tag ${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG}
-            docker push ${REPOSITORY}:${PASSTAG}
-            echo ${REPOSITORY}:${PASSTAG} > anchore_images
+            echo "${DOCKER_HUB_PSW}" | docker login ${REGISTRY} -u ${DOCKER_HUB_USR} --password-stdin
+            docker tag ${REGISTRY}/${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG}
+            docker push ${REGISTRY}/${REPOSITORY}:${PASSTAG}
+            echo ${REGISTRY}/${REPOSITORY}:${PASSTAG} > anchore_images
             """
           anchore name: 'anchore_images'
         } // end script
       } // end steps
     } // end stage "Promote to Prod"
     
+    //
+    // optional stage, if you actually want to archive this stuff
+    //
     stage('Clean Up') {
       // archive the sbom and delete the images locally
       steps {
-        archiveArtifacts artifacts: '*.json'
-        sh 'docker rmi ${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG} || failure=1' 
+        // if you want to archive artifacts uncomment this
+        //archiveArtifacts artifacts: '*.json'
+        sh 'docker rmi ${REGISTRY}/${REPOSITORY}:${TAG} ${REGISTRY}/${REPOSITORY}:${PASSTAG} || failure=1' 
         //
         // the "|| failure=1" at the end of this line just catches problems with the :prod
         // tag not existing if we didn't uncomment the optional "re-tag as prod" stage
