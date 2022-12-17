@@ -19,13 +19,13 @@ jobs:
   Build-Scan-Promote:
     runs-on: ubuntu-latest
     env:
-      ANCHORECTL_ANCHORE_USER: ${{ secrets.ANCHORE_CLI_USER }}
-      ANCHORECTL_ANCHORE_PASSWORD: ${{ secrets.ANCHORE_CLI_PASS }}
-      ANCHORECTL_ANCHORE_URL: ${{ secrets.ANCHORECTL_ANCHORE_URL }}
-      ANCHORE_CLI_USER: ${{ secrets.ANCHORE_CLI_USER }}
-      ANCHORE_CLI_PASS: ${{ secrets.ANCHORE_CLI_PASS }}
-      ANCHORE_CLI_URL: ${{ secrets.ANCHORE_CLI_URL }}
+      ANCHORECTL_USERNAME: ${{ secrets.ANCHORECTL_USERNAME }}
+      ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
+      ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
+      ## set ANCHORECTL_FAIL_BASED_ON_RESULTS to true if you want to break the pipeline based on the evaluation
+      ANCHORECTL_FAIL_BASED_ON_RESULTS: false
       IMAGE_REGISTRY: ghcr.io
+
     steps:
     
     # we'll use the tag with the SHA for testing, once we are satisfied we'll use the tag with the
@@ -36,61 +36,70 @@ jobs:
         echo "IMAGE=${IMAGE_REGISTRY}/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}" >> $GITHUB_ENV
         
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v2
 
+    ### note here that we've set "push: false" so the image stays local
     - name: build local container
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v3
       with:
         tags: ${{ env.IMAGE_SHA }}
         push: false
         load: true
-        
-    - name: Scan image
-      uses: anchore/scan-action@v3
-      id: scan
-      with:
-        image: ${{ env.IMAGE_SHA }}
-        fail-build: false
-        severity-cutoff: critical
-        acs-report-enable: true
-        
-    - name: Inspect SARIF report
-      run: cat ${{ steps.scan.outputs.sarif }}
 
-    - name: Upload Anchore scan SARIF report
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: ${{ steps.scan.outputs.sarif }}
+    ### optional
+    #- name: Scan image
+    #  uses: anchore/scan-action@v3
+    #  id: scan
+    #  with:
+    #    image: ${{ env.IMAGE_SHA }}
+    #    fail-build: false
+    #    severity-cutoff: critical
+    #    acs-report-enable: true
+    #    
+    #- name: Inspect SARIF report
+    #  run: cat ${{ steps.scan.outputs.sarif }}
+    #
+    #- name: Upload Anchore scan SARIF report
+    #  uses: github/codeql-action/upload-sarif@v2
+    #  with:
+    #    sarif_file: ${{ steps.scan.outputs.sarif }}
                 
     - name: Install Anchore CLI Tools
       run: |
-        sudo apt-get install python3-pip
-        pip install anchorecli
-        mkdir -p $HOME/.local/bin
-        curl https://anchorectl-releases.s3-us-west-2.amazonaws.com/v0.2.0/anchorectl_0.2.0_linux_amd64.tar.gz | tar xzvf - -C $HOME/.local/bin/
-        chmod 0755 $HOME/.local/bin/anchorectl
-        export PATH="$HOME/.local/bin/:$PATH"
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.3.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.63.0
+        export PATH="${HOME}/.local/bin/:${PATH}"
         
     - name: Verify Anchore Ready and Reachable
       run: |
         anchorectl system status 
         
     - name: Generate SBOM and Push to Anchore
-      run: |
-        anchorectl sbom upload --wait --dockerfile ./Dockerfile ${IMAGE_SHA}
+      run: |        
+        syft -o json packages ${IMAGE_SHA} | anchorectl image add --no-auto-subscribe --force --wait ${IMAGE_SHA} --from -
         
     - name: Pull Vulnerability List
       run: |
-        anchorectl image vuln ${IMAGE_SHA} all | tee anchore-vuln.txt
+        anchorectl image vulnerabilities ${IMAGE_SHA} 
+        #
+        ### if you want to archive this report, instead use:
+        #anchorectl image vulnerabilities ${IMAGE_SHA} | tee anchore-vuln.txt
+        
     - name: Pull Policy Evaluation
       run: |
         set -o pipefail
         # we have to set pipefail so that we can still gate on the evaluation, otherwise piping into tee will mask the failure
-        # also note that for this step we use anchore-cli, anchorectl doesn't yet have "evaluate check" implemented as of 0.1.4
-        anchore-cli evaluate check --detail ${IMAGE_SHA} | tee anchore-policy.txt
+        #
+        # set "ANCHORECTL_FAIL_BASED_ON_RESULTS=true" (see above in the "env:" section) to break the pipeline here if the policy evaluation returns FAIL
+        # or add -f, --fail-based-on-results to this command for the same result
+        #
+        anchorectl image check --detail ${IMAGE_SHA} | tee anchore-policy.txt
+        #
+        ### if you want to archive this report, instead use:
+        #anchorectl image check --detail ${IMAGE_SHA} | tee anchore-policy.txt
 
     - name: Re-Tag Image
       run: |
@@ -105,25 +114,24 @@ jobs:
         
     - name: Add Promoted Image to Anchore Queue
       run: |
-        anchorectl image add --noautosubscribe ${IMAGE}
-        anchorectl image wait ${IMAGE}
+        anchorectl image add --no-auto-subscribe --wait ${IMAGE}
     
-    # still need anchore-cli for subscription operations
-    - name: Purge Unneeded Evaluation
-      run: |
-        anchore-cli subscription list --full | grep ${GITHUB_SHA} | awk '{print $4}' | xargs -n 1 anchore-cli subscription del
-        anchorectl image delete ${IMAGE_SHA}
+    ### I've commented this out because the credential I use for this demo only has the "image-analyzer" role
+    ### which doesn't allow "image delete" - if you want to clean this up you'll need at least read-write role.
+    #- name: Purge Unneeded Evaluation
+    #  run: |
+    #    anchorectl image delete ${IMAGE_SHA}
     
     ## optional, if you want continuous re-evaluations
-    ## still need anchore-cli for subscription operations
     #- name: Activate Subscriptions
-    #    anchore-cli subscription activate policy_eval ${IMAGE}
-    #    anchore-cli subscription activate vuln_update ${IMAGE}    
+    #    anchorectl subscription activate ${IMAGE} policy_eval
+    #    anchorectl subscription activate ${IMAGE} vuln_update
         
-    - name: Archive Vulnerabilities and Evaluation
-      if: always()
-      uses: actions/upload-artifact@v2
-      with:
-        name: evaluation-report
-        path: anchore-*.txt
-        retention-days: 14
+    ### optional, if you want to archive the policy and/or vuln reports
+    #- name: Archive Vulnerabilities and Evaluation
+    #  if: always()
+    #  uses: actions/upload-artifact@v2
+    #  with:
+    #    name: evaluation-report
+    #    path: anchore-*.txt
+    #    retention-days: 14
