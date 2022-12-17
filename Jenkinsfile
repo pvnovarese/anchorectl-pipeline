@@ -22,7 +22,7 @@ pipeline {
     DOCKER_HUB = credentials("${HUB_CREDENTIAL}")
     // we'll need the anchore credential to pass the user
     // and password to anchorectl so it can upload the results
-    ANCHORE_CREDENTIAL = "AnchoreJenkinsUser"
+    ANCHORE_CREDENTIAL = "AnchorectlCredential"
     // use credentials to set ANCHORE_USR and ANCHORE_PSW
     ANCHORE = credentials("${ANCHORE_CREDENTIAL}")
     //
