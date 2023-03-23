@@ -124,36 +124,37 @@ pipeline {
             ### note in this case you don't need to push the image first
             ###
           """
-          // 
-          // 
-          // now let's get the evaluation
-          //
-          try {
-            sh """
-              export PATH="$HOME/.local/bin/:$PATH"
-              ### remove "--fail-based-on-results" if you don't care about the pass/fail policy evaulation
-              anchorectl image check --detail --fail-based-on-results ${REGISTRY}/${REPOSITORY}:${TAG}
-            """
-            // if you want the FULL details of the policy evaluation (which can be quite long), use "image check --detail" instead
-            //
-          } catch (err) {
-            // if evaluation fails, clean up (delete the image) and fail the build
-            sh """
-              docker rmi ${REGISTRY}/${REPOSITORY}:${TAG}
-              # optional: grab the evaluation with the anchore plugin so we can archive it
-              # echo ${REGISTRY}/${REPOSITORY}:${TAG} > anchore_images
-              # this doesn't actually work if we didn't push the image and the 
-              # plug-in automatically does an "image add" which fails.
-              exit 1
-            """
-            // anchore name: 'anchore_images'
-          } // end try
         } // end script 
       } // end steps
     } // end stage "analyze with anchorectl"
+
+    stage('Pull Vulnerability Report') {
+      steps {
+        script {
+          sh """
+            export PATH="$HOME/.local/bin/:$PATH"
+            anchorectl image vulnerabilities ${REGISTRY}/${REPOSITORY}:${TAG}
+          """
+        } // end script 
+      } // end steps
+    } // end stage "Pull Vulnerability Report"
+
+          
+    stage('Pull Policy Report') {
+      steps {
+        script {    
+          sh """
+            export PATH="$HOME/.local/bin/:$PATH"
+            anchorectl image check --detail ${REGISTRY}/${REPOSITORY}:${TAG}
+          """
+            //
+            // if you don't the FULL details of the policy evaluation (which can be quite long), remove the "--detail" option
+            // if you want to break the pipeline on a policy violation, add "--fail-based-on-results"
+            //
+        } // end script 
+      } // end steps
+    } // end stage "Pull Policy Report"
     
-    
-    //
     // optional stage, this just deletes the image locally so I don't end up with 300 old images
     //
     stage('Clean Up') {
