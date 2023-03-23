@@ -44,17 +44,16 @@ jobs:
           command: |
             ### build image
             docker build --pull --no-cache -t $IMAGE .
+            echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
+            docker push ${IMAGE}
       - run:
           name: Install Anchore Tools
           command: |
+            ### install syft and anchorectl.  syft is only needed if you want to scan  
+            ### locally on the runner and push the sboms to Anchore Enterprise.  
             #
-            ### this step is really not necessary, you can run these tools directly from my pvnovarese/anchore-tools:main
-            ### image, but if you don't want to run random people's images, you can install these dirctly (there is an
-            ### image for syft that Anchore officially maintains, but not one for anchorectl (yet).
-            #
-            set -o pipefail
-            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.3.0
-            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.63.0
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.4.0
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.73.0
       - run:
           name: Test Docker image
           command: |
@@ -62,62 +61,27 @@ jobs:
             #echo "testing connectivity"
             #anchorectl system status
             #
+            anchorectl image add --no-auto-subscribe --dockerfile Dockerfile --force --wait --annotation build_tool=circleci ${IMAGE}
+            #
+            ### alternate:
             ### generate SBOM with syft and then upload the SBOM with anchorectl
             ### note if you don't care about the Dockerfile you can skip the -v mount
             ### and if you remove the --dockerfile option you also probably won't need 
             ### the --force option either.
             #
-            set -o pipefail
-            syft -v -o json packages ${IMAGE} | anchorectl image add --no-auto-subscribe --dockerfile Dockerfile --force --wait --annotation build_tool=circleci ${IMAGE} --from -
+            #set -o pipefail
+            #syft -v -o json packages ${IMAGE} | anchorectl image add --no-auto-subscribe --dockerfile Dockerfile --force --wait --annotation build_tool=circleci ${IMAGE} --from -
             #
-            ### alternative to downloading syft directly, you can just use the containerized version
-            ### or in this case, my anchore-tools image that has syft, grype, anchorectl plus some
-            ### other common tools.
+            #  
             #
-            #docker run \
-            #     -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD \
-            #     -v /home/circleci/project/Dockerfile:/tmp/Dockerfile \
-            #     pvnovarese/anchore-tools:main \
-            #     /bin/bash -c "syft -o json packages ${IMAGE} | anchorectl image add --wait --dockerfile /tmp/Dockerfile --force --annotation build_tool=circleci ${IMAGE} --from -"
-            #     
+            ### pull vulnerability report
+            #
+            anchorectl image vulnerabilities ${IMAGE} 
+            #
             ### test policy evaluation.  Set ANCHORECTL_FAIL_BASED_ON_RESULTS if you want to break pipeline for a policy violation here.
-            ### note these could also be run from the anchore-tools 
             #
-            ### uncomment this line to use the container image instead of directly-installed anchorectl
-            # docker run -e ANCHORECTL_URL -e ANCHORECTL_USERNAME -e ANCHORECTL_PASSWORD pvnovarese/anchore-tools:main \
             anchorectl image check --detail ${IMAGE} 
-      - run:
-          name: Push Docker image
-          command: |
-            #
-            ### if we got this far, then the image has passed, we can "promote" it
-            ### in this case, that means pushing it to docker hub
-            #
-            ### login to docker hub, change to whatever registry you're using
-            #
-            echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
-            #
-            ### now the push
-            #
-            docker push ${IMAGE}  
             
-  examine:
-    docker:
-      - image: docker.io/pvnovarese/anchore-tools:main
-    steps:
-      - checkout
-      - run: 
-          name: Set Environment
-          command: |
-            ### first set the IMAGE variable (can't set this globally if we want to construct it from other variables)
-            echo 'export IMAGE=${DOCKER_USERNAME}/${CIRCLE_PROJECT_REPONAME}:circleci-latest' >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: Vulnerability Report
-          command: anchorectl image vulnerabilities ${IMAGE}
-      - run:
-          name: Policy Report
-          command: anchorectl image check --detail ${IMAGE}
 
 
             
@@ -133,29 +97,3 @@ workflows:
                 - test
           context:
             - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
-      - examine:
-          filters:
-            branches:
-              only:
-                - main
-          context:
-            - anchore
-          requires:
-            - build-push
-  weekly:
-    triggers: #use the triggers key to indicate a scheduled build
-      - schedule:
-          cron: "0 18 * * 2" # tuesday at 18:00
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - build-push:
-         context:
-           - anchore  # in the "anchore" context, I've defined ANCHORE_CLI_URL, ANCHORE_CLI_USER, ANCHORE_CLI_PASS, ANCHORE_FAIL_ON_POLICY, DOCKER_USERNAME, and DOCKER_PASSWORD
-      - examine:
-          context:
-           - anchore
-          requires:
-            - build-push
