@@ -56,9 +56,9 @@ pipeline {
       steps {
         sh """
           ### install syft (for local SPDX/CycloneDX sbom generation, this will be implemented directly in anchorctl in the future as well)
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b $HOME/.local/bin v0.63.0
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b $HOME/.local/bin v0.73.0
           ### install anchorectl 
-          curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v1.3.0
+          curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v1.4.0
           export PATH="$HOME/.local/bin/:$PATH"
           ### now make sure it all works
           which syft
@@ -72,8 +72,11 @@ pipeline {
     stage('Build Image') {
       steps {
         script {
-          // build image and record repo/tag in DOCKER_IMAGE
-          // then push it to docker hub (or whatever registry)
+          // login to docker hub (or whatever registry)
+          // build image and push it to registry
+          //
+          // alternatively, if you want to scan the image locally without pushing 
+          // it somewhere first, we can do that (see the next stage for details)
           //
           sh """
             echo "${DOCKER_HUB_PSW}" | docker login ${REGISTRY} -u ${DOCKER_HUB_USR} --password-stdin
@@ -98,21 +101,30 @@ pipeline {
           sh """
             #### we installed anchorectl locally, PATH gets reset in each stage
             export PATH="$HOME/.local/bin/:$PATH"
-            anchorectl image add --wait --no-auto-subscribe --annotation build_tool=jenkins --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
-            ###
+            #
+            ### actually add the image to the queue to be scanned
+            #
+            ### --wait tells anchorectl to block until the scan is complete (this isn't always necessary but if you want to pull 
+            ### the vulnerability list and/or policy report, you probably want to wait
+            #
+            ### --no-auto-subscribe tells the policy engine to just pull the image and scan it once.  if you don't pass this 
+            ### option, anchore enterprise will continually poll the tag to see if any new version has been pushed and if 
+            ### it detects a new image, it automatically pulls it and scans it.
+            #
+            ### --force tells Anchore Enterprise to build a new SBOM even if one already exists in the catalog
+            #
+            ### --dockerfile is optional but if you want to test Dockerfile instructions this is recommended
+            #
+            anchorectl image add --wait --no-auto-subscribe --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
+            #
             ### alternatively you can use syft to generate the sbom locally and push the sbom to the Anchore Enterprise API:
             #
-            #  syft -o json packages ${REGISTRY}/${REPOSITORY}:${TAG} | anchorectl image add --wait --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG} --from -
+            ###  syft -o json packages ${REGISTRY}/${REPOSITORY}:${TAG} | anchorectl image add --wait --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG} --from -
             #
             ### note in this case you don't need to push the image first
             ###
           """
           // 
-          // (note - at this point the image has not been pushed anywhere)
-          //
-          // we use "--wait" to wait for analysis to complete (even though we generated the sbom locally, 
-          // the backend analyzer still has some work to do - it validates the uploaded sbom and inserts it into 
-          // the catalog, plus it will do an initial policy evaluation etc.
           // 
           // now let's get the evaluation
           //
@@ -120,7 +132,7 @@ pipeline {
             sh """
               export PATH="$HOME/.local/bin/:$PATH"
               ### remove "--fail-based-on-results" if you don't care about the pass/fail policy evaulation
-              anchorectl image check --fail-based-on-results ${REGISTRY}/${REPOSITORY}:${TAG}
+              anchorectl image check --detail --fail-based-on-results ${REGISTRY}/${REPOSITORY}:${TAG}
             """
             // if you want the FULL details of the policy evaluation (which can be quite long), use "image check --detail" instead
             //
@@ -140,36 +152,14 @@ pipeline {
       } // end steps
     } // end stage "analyze with anchorectl"
     
-    // THIS STAGE IS OPTIONAL
-    // the purpose of this stage is to simply show that if an image passes the scan we could
-    // continue the pipeline with something like "promoting" the image to production etc
-    stage('Promote to Prod and Push to Registry') {
-      steps {
-        script {
-          // login to docker hub, re-tag image as ${PASSTAG} and then push to docker hub
-          // then we EITHER:
-          // 1. use anchorectl to add the PASSTAG tag to the catalog - no need to wait for evaluation
-          // 2. use anchore plugin to add the PASSTAG tag and grab the evaluation report
-          sh """
-            echo "${DOCKER_HUB_PSW}" | docker login ${REGISTRY} -u ${DOCKER_HUB_USR} --password-stdin
-            docker tag ${REGISTRY}/${REPOSITORY}:${TAG} ${REPOSITORY}:${PASSTAG}
-            docker push ${REGISTRY}/${REPOSITORY}:${PASSTAG}
-            echo ${REGISTRY}/${REPOSITORY}:${PASSTAG} > anchore_images
-            """
-          anchore name: 'anchore_images', annotations: [[key: 'build_tool', value: 'jenkins']]
-        } // end script
-      } // end steps
-    } // end stage "Promote to Prod"
     
     //
-    // optional stage, if you actually want to archive this stuff
+    // optional stage, this just deletes the image locally so I don't end up with 300 old images
     //
     stage('Clean Up') {
-      // archive the sbom and delete the images locally
+      // delete the images locally
       steps {
-        // if you want to archive artifacts uncomment this
-        //archiveArtifacts artifacts: '*.json'
-        sh 'docker rmi ${REGISTRY}/${REPOSITORY}:${TAG} ${REGISTRY}/${REPOSITORY}:${PASSTAG} || failure=1' 
+        sh 'docker rmi ${REGISTRY}/${REPOSITORY}:${TAG} || failure=1' 
         //
         // the "|| failure=1" at the end of this line just catches problems with the :prod
         // tag not existing if we didn't uncomment the optional "re-tag as prod" stage
