@@ -49,7 +49,7 @@ jobs:
       with:
         tags: ${{ env.IMAGE }}
         push: true
-        load: true
+        load: false
                 
     - name: Install Anchore CLI Tools
       run: |
