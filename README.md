@@ -28,9 +28,9 @@ Many operations of anchorectl support setting configuration through environment 
 For most pipeline scenarios, the relevant configuration variables will be:
 
 ```
-ANCHORECTL_URL         # the URL to the Anchore Enterprise API 
-ANCHORECTL_USERNAME    # username to authenticate as
-ANCHORECTL_PASSWORD    # password for ANCHORECTL_USERNAME
+ANCHORECTL_URL         # the URL to the Anchore Enterprise API e.g. http://localhost:8228/
+ANCHORECTL_USERNAME    # username to authenticate as e.g. admin
+ANCHORECTL_PASSWORD    # password for ANCHORECTL_USERNAME e.g. foobar 
 ```
 
 In some cases, you may also be interested in 
