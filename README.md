@@ -51,4 +51,28 @@ anchorectl image vulnerabilities    # Get image vulnerabilities
 anchorectl image check              # Get the policy evaluation for the given image
 ```
 
+### Analyzing Images
+
+There are two basic methods for analyzing images (essentially, creating the SBOM and inserting it into the catalog).  The easiest method is to have the analyzer service in the Anchore Enterprise deployment pull the image and do the analysis.  This method required that the image has been pushed to a registry that the Anchore Enterprise deployment can reach on the network, and that Anchore Enterprise has any necessary credentials for the repository in question.
+
+```anchorectl image add ${IMAGE_NAME}```
+
+This will add the image to the queue to be analyzed and then exit without waiting for analysis to complete.  In many cases, users will want to retreive vulnerabilities or policy compliance reports which will require waiting for the analysis to complete, in which case the user may add the `--wait` option.
+
+```anchorectl image add --wait ${IMAGE_NAME}```
+
+The second method for analyzing images 
+
+```syft -o json ${IMAGE_NAME} | anchorectl image add ${IMAGE_NAME} --from -```
+
+
+### Pulling Vulnerability Reports
+
+```anchorectl image vulnerabilities ${IMAGE_NAME}```
+
+### Pulling Policy Compliance Reports
+
+```anchorectl image check --detail ${IMAGE_NAME}```
+
+
 ## CI Implementations
