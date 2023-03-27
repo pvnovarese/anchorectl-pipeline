@@ -61,18 +61,25 @@ This will add the image to the queue to be analyzed and then exit without waitin
 
 ```anchorectl image add --wait ${IMAGE_NAME}```
 
-The second method for analyzing images 
+The second method for analyzing images allows you to analyze images locally (e.g. if you haven't pushed the image to a registry, you would want to use this method).
 
 ```syft -o json ${IMAGE_NAME} | anchorectl image add ${IMAGE_NAME} --from -```
 
+this uses `syft` to create the SBOM and then pipes that to `anchorectl` which pushes the SBOM to the Anchore Enterprise API.
 
 ### Pulling Vulnerability Reports
+
+(still work to do here)
 
 ```anchorectl image vulnerabilities ${IMAGE_NAME}```
 
 ### Pulling Policy Compliance Reports
 
+(still work to do here)
+
 ```anchorectl image check --detail ${IMAGE_NAME}```
 
 
 ## CI Implementations
+
+(still work to do here)
