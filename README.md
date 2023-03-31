@@ -30,9 +30,6 @@ In some cases, you may also be interested in
 ANCHORECTL_FAIL_BASED_ON_RESULTS   # default false, if true, "anchorectl image check" will exit with 1 if the policy evaluation fails
 ```
 
-## anchorectl Options
-
-
 
 ## Usage
 
