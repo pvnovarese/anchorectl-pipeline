@@ -2,24 +2,15 @@
 
 [![Anchore Enterprise with anchorectl](https://github.com/pvnovarese/anchorectl-pipeline/actions/workflows/anchorectl-enterprise.yaml/badge.svg)](https://github.com/pvnovarese/anchorectl-pipeline/actions/workflows/anchorectl-enterprise.yaml)
 
-This is a very rough demo of integrating Anchore with various CI pipelines using anchorectl. 
-
-
 ## Introduction
 
-```
-curl.....
-```
-
-anchorectl is a command line interface tool for interacting with Anchore Enterprise. For full documentation on this client, please refer to https://docs.anchore.com
-
-This document will focus on using anchorectl with CI tooling to automate these interactions in pipelines.  
+anchorectl is a command line interface tool for interacting with Anchore Enterprise.  This document covers the use of anchorectl specifically in automated pipelines.  For full documentation on this client, please refer to https://docs.anchore.com
 
 ## Quickstart Install
 
 ```curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b /usr/local/bin```
 
-This will install the latest version into /usr/local/bin.
+This will install the latest version into /usr/local/bin.  In pipeline usage, depending on tooling, you may need to install as a non-root user, in which case you can install in a location such as `${HOME}/.local/bin` or similar.  You may also need to augment your `${PATH}` depending on environment.
 
 ## Configuration
 
@@ -41,6 +32,8 @@ ANCHORECTL_FAIL_BASED_ON_RESULTS   # default false, if true, "anchorectl image c
 
 ## anchorectl Options
 
+
+
 ## Usage
 
 There is extensive built-in help for `anchorectl` that can be accessed with `-h`.  The most common commands used in CI pipelines are:
@@ -50,6 +43,12 @@ anchorectl image add                # Analyze a container image
 anchorectl image vulnerabilities    # Get image vulnerabilities
 anchorectl image check              # Get the policy evaluation for the given image
 ```
+
+### Verifying Connectivity and Functionality
+
+Once you have secrets configured, users can verify that your credentials are correct, network connectivity is live, and that Anchore Enterprise is responding:
+
+```anchorectl system status```
 
 ### Analyzing Images
 
@@ -65,21 +64,64 @@ The second method for analyzing images allows you to analyze images locally (e.g
 
 ```syft -o json ${IMAGE_NAME} | anchorectl image add ${IMAGE_NAME} --from -```
 
-this uses `syft` to create the SBOM and then pipes that to `anchorectl` which pushes the SBOM to the Anchore Enterprise API.
+this uses `syft` to create the SBOM and then pipes that to `anchorectl` which pushes the SBOM to the Anchore Enterprise API.  Note that to use this method, you will need to install `syft` in addition to `anchorectl` as noted above.  The latest version of `syft` can be installed via
+
+```curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin```
 
 ### Pulling Vulnerability Reports
 
-(still work to do here)
+To grab vulnerability reports: 
 
 ```anchorectl image vulnerabilities ${IMAGE_NAME}```
 
+Note that if you want to parse these results programatically, you can request the results in json format with the `-o json` option, e.g.
+
+```anchorectl -o json image vulnerabilities ${IMAGE_NAME}```
+
+
 ### Pulling Policy Compliance Reports
 
-(still work to do here)
+To apply the active policy bundle and get a simple pass/fail result:
 
-```anchorectl image check --detail ${IMAGE_NAME}```
+```anchorectl image check ${IMAGE_NAME}```
 
+The following options may be useful:
+
+* `--detail` provides line-by-line feedback for every rule triggered in the policy bundle
+* `-p, --policy <string>` usess the specified policy bundle instead of the active bundle
+* `--f, --fail-based-on-results` sets the exit code to 1 if the policy evaluation result is "fail" (useful for breaking pipelines as a gating mechanism)
+* `-o, --output json` provide results in json format for further parsing (other formats available, see help text for details)
 
 ## CI Implementations
 
-(still work to do here)
+There are samples for Jenkins, GitHub workflows, etc in this repository, but the outline of what needs to happen is essentially the same in all tools:
+
+```
+        ### first do whatever normal image build steps you would do here
+        
+        ### now begin the analysis and evaluation of the image
+        mkdir -p ${HOME}/.local/bin
+        curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin  
+        export PATH="${HOME}/.local/bin/:${PATH}"
+        anchorectl image add --wait ${IMAGE_NAME}
+        anchorectl image vulnerabilities ${IMAGE_NAME}
+        anchorectl image check -f --detail ${IMAGE_NAME}
+        
+        ### now if the image passed the policy check on the previous line, we
+        ### can continue our pipeline (e.g. push to QA, promote image to 
+        ### another registry, etc).
+```
+
+## Advanced Usage
+
+Beyond just simple policy checks, you may want to activate subscriptions on your new image.  This will begin continuous updates of the vulnerability matches and/or policy evaluation in the background (this is most useful when coupled with the "Notifications" facility of Anchore Enterprise, see the [Notifications documentation](https://docs.anchore.com/current/docs/configuration/notifications/) for more details):
+
+```
+        ### begin continuous updates of vulnerability matches
+        anchorectl subscription activate ${IMAGE_NAME} vuln_update
+        
+        ### begin continuous updates of policy evaluation
+        anchorectl subscription activate ${IMAGE_NAME} policy_eval   
+```
+
+In either case, if new vulnerability matches are found or the pass/fail policy result changes, an event is created which can trigger notifications, hit a webhook, etc.
