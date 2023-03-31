@@ -57,6 +57,10 @@ This will add the image to the queue to be analyzed and then exit without waitin
 
 ```anchorectl image add --wait ${IMAGE_NAME}```
 
+Another useful option is `--no-auto-subscribe`, which turns off the default behavior of polling the given tag to check for new images being pushed (if this is active and a new image digest is found at that tag, Anchore Enterprise will automatically pull it and analyze it).
+
+```anchorectl image add --no-auto-subscribe ${IMAGE_NAME}```
+
 The second method for analyzing images allows you to analyze images locally (e.g. if you haven't pushed the image to a registry, you would want to use this method).
 
 ```syft -o json ${IMAGE_NAME} | anchorectl image add ${IMAGE_NAME} --from -```
@@ -64,6 +68,8 @@ The second method for analyzing images allows you to analyze images locally (e.g
 this uses `syft` to create the SBOM and then pipes that to `anchorectl` which pushes the SBOM to the Anchore Enterprise API.  Note that to use this method, you will need to install `syft` in addition to `anchorectl` as noted above.  The latest version of `syft` can be installed via
 
 ```curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin```
+
+The `--wait` and `--no-auto-subscribe` options are valid with this method as well.
 
 ### Pulling Vulnerability Reports
 
