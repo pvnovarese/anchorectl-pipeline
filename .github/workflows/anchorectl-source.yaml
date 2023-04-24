@@ -54,5 +54,5 @@ jobs:
         
     - name: Pull Vulnerability List
       run: |
-        anchorectl image vulnerabilities ${GIT_SERVER}/${GITHUB_REPOSITORY}@${GITHUB_SHA} 
+        anchorectl source vulnerabilities ${GIT_SERVER}/${GITHUB_REPOSITORY}@${GITHUB_SHA} 
             
