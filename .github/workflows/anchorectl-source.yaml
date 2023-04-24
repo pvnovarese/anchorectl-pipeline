@@ -1,7 +1,7 @@
 # This workflow checks out code, builds an SBOM for the repository,
 # and uploads it to Anchore Enterprise
 
-name: Anchore Enterprise with anchorectl
+name: Create and Upload Source SBOM
 
 on: 
   #push:
@@ -49,7 +49,7 @@ jobs:
       run: |        
         syft -o json . | anchorectl source add ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} --application ${APPLICATION}@${VERSION} --from -
         
-    - name: Pull Vulnerability List
-      run: |
-        anchorectl image vulnerabilities ${IMAGE} 
+    #- name: Pull Vulnerability List
+    #  run: |
+    #    anchorectl image vulnerabilities ${IMAGE} 
             
