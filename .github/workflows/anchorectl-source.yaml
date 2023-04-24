@@ -46,10 +46,12 @@ jobs:
         anchorectl system status 
         
     - name: Generate SBOM and Push to Anchore Enterprise
-      run: |        
+      run: |
+        ls -l
+        pwd
         syft -o json . | anchorectl source add ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} --application ${APPLICATION}@${VERSION} --from -
         
-    #- name: Pull Vulnerability List
-    #  run: |
-    #    anchorectl image vulnerabilities ${IMAGE} 
+    - name: Pull Vulnerability List
+      run: |
+        anchorectl image vulnerabilities ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} 
             
