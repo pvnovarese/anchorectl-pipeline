@@ -48,8 +48,6 @@ jobs:
         
     - name: Generate SBOM and Push to Anchore Enterprise
       run: |
-        ls -l
-        pwd
         syft -o json . | anchorectl source add --wait ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} --application ${APPLICATION}@${VERSION} --from -
         
     - name: Pull Vulnerability List
