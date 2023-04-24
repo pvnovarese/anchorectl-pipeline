@@ -50,9 +50,9 @@ jobs:
       run: |
         ls -l
         pwd
-        syft -o json . | anchorectl source add ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} --application ${APPLICATION}@${VERSION} --from -
+        syft -o json . | anchorectl source add --wait ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} --application ${APPLICATION}@${VERSION} --from -
         
     - name: Pull Vulnerability List
       run: |
-        anchorectl source vulnerabilities ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} 
+        anchorectl source vulnerabilities ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} 
             
