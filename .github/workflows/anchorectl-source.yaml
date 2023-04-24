@@ -1,0 +1,55 @@
+# This workflow checks out code, builds an SBOM for the repository,
+# and uploads it to Anchore Enterprise
+
+name: Anchore Enterprise with anchorectl
+
+on: 
+  #push:
+  #  branches:
+  #    - main
+  #schedule:
+  #  - cron: '38 23 */14 * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Manual Scan'  
+        
+jobs:
+
+  create-and-push:
+    runs-on: ubuntu-latest
+    env:
+      ANCHORECTL_USERNAME: ${{ secrets.ANCHORECTL_USERNAME }}
+      ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
+      ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
+      # if $APPLICATION does not exist, create it with:
+      # anchorectl application add ${APPLICATION}
+      APPLICATION: anchorectl-pipeline
+      # if $VERSION does not exist, create it with:
+      # anchorectl application version add ${APPLICATION}@${VERSION}
+      VERSION: 0.0.1
+      
+
+    steps:
+            
+    - name: Checkout Code
+      uses: actions/checkout@v3
+                            
+    - name: Install Anchore CLI Tools
+      run: |
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.5.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.75.0
+        export PATH="${HOME}/.local/bin/:${PATH}"
+        
+    - name: Verify Anchore Ready and Reachable
+      run: |
+        anchorectl system status 
+        
+    - name: Generate SBOM and Push to Anchore Enterprise
+      run: |        
+        syft -o json . | anchorectl source add ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} --application ${APPLICATION}@${VERSION} --from -
+        
+    - name: Pull Vulnerability List
+      run: |
+        anchorectl image vulnerabilities ${IMAGE} 
+            
