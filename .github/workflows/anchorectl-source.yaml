@@ -22,6 +22,7 @@ jobs:
       ANCHORECTL_USERNAME: ${{ secrets.ANCHORECTL_USERNAME }}
       ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
       ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
+      GIT_SERVER: github.com
       # if $APPLICATION does not exist, create it with:
       # anchorectl application add ${APPLICATION}
       APPLICATION: anchorectl-pipeline
@@ -49,9 +50,9 @@ jobs:
       run: |
         ls -l
         pwd
-        syft -o json . | anchorectl source add ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} --application ${APPLICATION}@${VERSION} --from -
+        syft -o json . | anchorectl source add ${GIT_SERVER}/${GITHUB_REPOSITORY}@${GITHUB_SHA} --application ${APPLICATION}@${VERSION} --from -
         
     - name: Pull Vulnerability List
       run: |
-        anchorectl image vulnerabilities ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA} 
+        anchorectl image vulnerabilities ${GIT_SERVER}/${GITHUB_REPOSITORY}@${GITHUB_SHA} 
             
