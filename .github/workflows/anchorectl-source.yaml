@@ -4,9 +4,9 @@
 name: Create and Upload Source SBOM
 
 on: 
-  #push:
-  #  branches:
-  #    - main
+  push:
+    branches:
+      - main
   #schedule:
   #  - cron: '38 23 */14 * *'
   workflow_dispatch:
