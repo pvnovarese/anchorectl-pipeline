@@ -22,17 +22,16 @@ jobs:
       ANCHORECTL_USERNAME: ${{ secrets.ANCHORECTL_USERNAME }}
       ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
       ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
-      GIT_SERVER: github.com
       # if $APPLICATION does not exist, create it with:
       # anchorectl application add ${APPLICATION}
-      APPLICATION: anchorectl-pipeline
+      APPLICATION: ${{ github.event.repository.name }}
       # if $VERSION does not exist, create it with:
       # anchorectl application version add ${APPLICATION}@${VERSION}
-      VERSION: 0.0.1
+      VERSION: HEAD
       
 
     steps:
-            
+                
     - name: Checkout Code
       uses: actions/checkout@v3
                             
