@@ -58,27 +58,36 @@ jobs:
         push: true
         load: false
                 
-    - name: Install Anchore CLI Tools
+    - name: Install anchorectl Binary
       run: |
-        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.4.0
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.73.0
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
         export PATH="${HOME}/.local/bin/:${PATH}"
         
     - name: Verify Anchore Ready and Reachable
       run: |
         anchorectl system status 
-        
-    - name: Queue Image for Scanning by Anchore Enterprise
-      run: |        
-       anchorectl image add --no-auto-subscribe --wait ${IMAGE} 
-       ### if desired, you could pass the dockerfile:
-       ### anchorectl image add --no-auto-subscribe --wait --force --dockerfile ./Dockerfile ${IMAGE}
+    
+    ### This is the standard method of scanning (known as "centralized" scanning), anchorectl
+    ### hits the Anchore Enterprise API, adds ${IMAGE} to the queue to be scanned, and in this case
+    ### waits for analysis to complete.  In this case, the Analyzer service in the Anchore Enterprise
+    ### deplolyment will pull ${IMAGE} and do the SBOM creation.
+    #- name: Queue Image for Scanning by Anchore Enterprise
+    #  run: |        
+    #   anchorectl image add --no-auto-subscribe --wait ${IMAGE} 
+    #   ### if desired, you could pass the dockerfile:
+    #   ### anchorectl image add --no-auto-subscribe --wait --force --dockerfile ./Dockerfile ${IMAGE}
         
     ### ALTERNATE
-    ### if you want to scan locally, use this instead
-    #- name: Generate SBOM and Push to Anchore
-    #  run: |        
-    #    syft -o json packages ${IMAGE} | anchorectl image add --no-auto-subscribe --force --wait ${IMAGE} --from -
+    ### if you want to scan locally (also known as "distributed" scanning), use this instead
+    ### "--from docker" tells anchorectl to use the local image, generate the sbom itself, and then
+    ### push the SBOM to the Anchore Enterprise API.  In this case, the actual image is never pulled
+    ### by the Anchore Enterprise deployment.  It never needs to be pushed anywhere in this case.
+    ### There is also a "--from registry" option, this tells anchorectl to pull the image from the
+    ### registry (rather than the the Anchore Enterprise backend analyzer pulling the image) and
+    ### create the SBOM locally and push the SBOM to the API.
+    - name: Generate SBOM and Push to Anchore
+      run: |        
+        anchorectl image add --no-auto-subscribe --from docker --wait ${IMAGE}
         
     - name: Pull Vulnerability List
       run: |
