@@ -1,5 +1,9 @@
 # This workflow checks out code, builds an image, performs a container image
 # scan, evaluates the image, and promotes it if it passes.
+# requires:
+# 1) A working Anchore Enterprise deployment
+# 2) A user credential with the image-analyzer role
+# 3) Ability to download anchorectl from anchore.io 
 
 name: Anchore Enterprise with anchorectl
 
@@ -62,20 +66,22 @@ jobs:
       run: |
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
         export PATH="${HOME}/.local/bin/:${PATH}"
-        
-    - name: Verify Anchore Ready and Reachable
-      run: |
-        anchorectl system status 
+    
+    ### for debugging, you can uncomment this to check for connectivity to the Anchore 
+    ### Enterprise deployment
+    #- name: Verify Anchore Ready and Reachable
+    #  run: |
+    #    anchorectl system status 
     
     ### This is the standard method of scanning (known as "centralized" scanning), anchorectl
     ### hits the Anchore Enterprise API, adds ${IMAGE} to the queue to be scanned, and in this case
     ### waits for analysis to complete.  In this case, the Analyzer service in the Anchore Enterprise
     ### deplolyment will pull ${IMAGE} and do the SBOM creation.
-    #- name: Queue Image for Scanning by Anchore Enterprise
-    #  run: |        
-    #   anchorectl image add --no-auto-subscribe --wait ${IMAGE} 
-    #   ### if desired, you could pass the dockerfile:
-    #   ### anchorectl image add --no-auto-subscribe --wait --force --dockerfile ./Dockerfile ${IMAGE}
+    - name: Queue Image for Scanning by Anchore Enterprise
+      run: |        
+       anchorectl image add --no-auto-subscribe --wait ${IMAGE} 
+       ### if desired, you could pass the dockerfile:
+       ### anchorectl image add --no-auto-subscribe --wait --force --dockerfile ./Dockerfile ${IMAGE}
         
     ### ALTERNATE
     ### if you want to scan locally (also known as "distributed" scanning), use this instead
@@ -85,9 +91,9 @@ jobs:
     ### There is also a "--from registry" option, this tells anchorectl to pull the image from the
     ### registry (rather than the the Anchore Enterprise backend analyzer pulling the image) and
     ### create the SBOM locally and push the SBOM to the API.
-    - name: Generate SBOM and Push to Anchore
-      run: |        
-        anchorectl image add --no-auto-subscribe --from docker --wait ${IMAGE}
+    #- name: Generate SBOM and Push to Anchore
+    #  run: |        
+    #    anchorectl image add --no-auto-subscribe --from docker --wait ${IMAGE}
         
     - name: Pull Vulnerability List
       run: |
@@ -101,11 +107,6 @@ jobs:
         anchorectl image check --detail ${IMAGE}
 
     
-    ### I've commented this out because the credential I use for this demo only has the "image-analyzer" role
-    ### which doesn't allow "image delete" - if you want to clean this up you'll need at least read-write role.
-    #- name: Purge Unneeded Evaluation
-    #  run: |
-    #    anchorectl image delete ${IMAGE}
     
     ## optional, if you want continuous re-evaluations
     #- name: Activate Subscriptions
