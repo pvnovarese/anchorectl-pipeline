@@ -19,9 +19,9 @@ jobs:
   create-and-push:
     runs-on: ubuntu-latest
     env:
-      ANCHORECTL_USERNAME: ${{ secrets.ANCHORECTL_USERNAME }}
+      ANCHORECTL_URL: ${{ vars.ANCHORECTL_URL }}
+      ANCHORECTL_USERNAME: ${{ vars.ANCHORECTL_USERNAME }}
       ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
-      ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
       # if $APPLICATION does not exist, create it with:
       # anchorectl application add ${APPLICATION}
       APPLICATION: ${{ github.event.repository.name }}
