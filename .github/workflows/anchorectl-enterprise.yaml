@@ -57,6 +57,7 @@ jobs:
 
   Anchore-Scan:
     runs-on: ubuntu-latest
+    needs: Build
     env:
       ANCHORECTL_URL: ${{ vars.ANCHORECTL_URL }}
       ANCHORECTL_USERNAME: ${{ vars.ANCHORECTL_USERNAME }}
