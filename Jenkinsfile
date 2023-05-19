@@ -83,6 +83,8 @@ pipeline {
         ANCHORECTL_URL = credentials("Anchorectl_Url")
         ANCHORECTL_USERNAME = credentials("Anchorectl_Username")
         ANCHORECTL_PASSWORD = credentials("Anchorectl_Password")
+        // change ANCHORECTL_FAIL_BASED_ON_RESULTS to "true" if you want to break on policy violations
+        ANCHORECTL_FAIL_BASED_ON_RESULTS = "false"
       }
       steps {
         script {
@@ -113,37 +115,19 @@ pipeline {
             #
             ### note in this case you don't need to push the image first
             ###
+            ###
+            ### uncomment to pull vulnerability list (optional)
+            # anchorectl image vulnerabilities ${REGISTRY}/${REPOSITORY}:${TAG}
+            ###
+            ### check policy evaluation
+            anchorectl image check --detail ${REGISTRY}/${REPOSITORY}:${TAG}
+            ### 
+            ### if you want to break the pipeline on a policy violation, add "--fail-based-on-results"
+            ### or change the ANCHORECTL_FAIL_BASE_ON_RESULTS variable above to "true"
           """
         } // end script 
       } // end steps
     } // end stage "analyze with anchorectl"
-
-    stage('Pull Vulnerability Report') {
-      steps {
-        script {
-          sh """
-            export PATH="$HOME/.local/bin/:$PATH"
-            anchorectl image vulnerabilities ${REGISTRY}/${REPOSITORY}:${TAG}
-          """
-        } // end script 
-      } // end steps
-    } // end stage "Pull Vulnerability Report"
-
-          
-    stage('Pull Policy Report') {
-      steps {
-        script {    
-          sh """
-            export PATH="$HOME/.local/bin/:$PATH"
-            anchorectl image check --detail ${REGISTRY}/${REPOSITORY}:${TAG}
-          """
-            //
-            // if you don't the FULL details of the policy evaluation (which can be quite long), remove the "--detail" option
-            // if you want to break the pipeline on a policy violation, add "--fail-based-on-results"
-            //
-        } // end script 
-      } // end steps
-    } // end stage "Pull Policy Report"
     
     // optional stage, this just deletes the image locally so I don't end up with 300 old images
     //
