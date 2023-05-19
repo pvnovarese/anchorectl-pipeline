@@ -20,23 +20,15 @@ on:
         
 jobs:
 
-  Build-Scan-Promote:
+  Build:
     runs-on: ubuntu-latest
     env:
-      ANCHORECTL_URL: ${{ vars.ANCHORECTL_URL }}
-      ANCHORECTL_USERNAME: ${{ vars.ANCHORECTL_USERNAME }}
-      ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
-      ## set ANCHORECTL_FAIL_BASED_ON_RESULTS to true if you want to break the pipeline based on the evaluation
-      ANCHORECTL_FAIL_BASED_ON_RESULTS: false
       REGISTRY: ghcr.io
 
     steps:
     
-    # we'll use the tag with the SHA for testing, once we are satisfied we'll use the tag with the
-    # branch name and then actually push that to the registry (the SHA tag never gets pushed)
-    - name: "Set environmental variables"
+    - name: "Set IMAGE environmental variables"
       run: |
-        echo "IMAGE_SHA=${REGISTRY}/${GITHUB_REPOSITORY}:${GITHUB_SHA}" >> $GITHUB_ENV
         echo "IMAGE=${REGISTRY}/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}" >> $GITHUB_ENV
         
     - name: Checkout Code
@@ -61,7 +53,24 @@ jobs:
         tags: ${{ env.IMAGE }}
         push: true
         load: false
-                
+
+
+  Anchore-Scan:
+    runs-on: ubuntu-latest
+    env:
+      ANCHORECTL_URL: ${{ vars.ANCHORECTL_URL }}
+      ANCHORECTL_USERNAME: ${{ vars.ANCHORECTL_USERNAME }}
+      ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
+      ## set ANCHORECTL_FAIL_BASED_ON_RESULTS to true if you want to break the pipeline based on the evaluation
+      ANCHORECTL_FAIL_BASED_ON_RESULTS: false
+      REGISTRY: ghcr.io
+
+    steps:
+    
+    - name: "Set IMAGE environmental variable"
+      run: |
+        echo "IMAGE=${REGISTRY}/${GITHUB_REPOSITORY}:${GITHUB_REF_NAME}" >> $GITHUB_ENV
+
     - name: Install anchorectl Binary
       run: |
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
@@ -106,8 +115,6 @@ jobs:
         #
         anchorectl image check --detail ${IMAGE}
 
-    
-    
     ## optional, if you want continuous re-evaluations
     #- name: Activate Subscriptions
     #    anchorectl subscription activate ${IMAGE} policy_eval
