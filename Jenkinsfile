@@ -21,27 +21,27 @@ pipeline {
     DOCKER_HUB = credentials("${HUB_CREDENTIAL}")
     // we'll need the anchore credential to pass the user
     // and password to anchorectl so it can upload the results
-    ANCHORE_CREDENTIAL = "AnchorectlCredential"
+    // ANCHORE_CREDENTIAL = "AnchorectlCredential"
     // use credentials to set ANCHORE_USR and ANCHORE_PSW
-    ANCHORE = credentials("${ANCHORE_CREDENTIAL}")
+    // ANCHORE = credentials("${ANCHORE_CREDENTIAL}")
     //
     // now set the actual envvars that anchorectl uses:
-    ANCHORECTL_USERNAME = "${ANCHORE_USR}"
-    ANCHORECTL_PASSWORD = "${ANCHORE_PSW}"
+    // ANCHORECTL_USERNAME = "${ANCHORE_USR}"
+    // ANCHORECTL_PASSWORD = "${ANCHORE_PSW}"
     //
     // api endpoint of your anchore instance (anchore-cli needs the trailing /v1,
     // anchorectl doesn't want the /v1)
     // we could hardcode these eg:
     // ANCHORECTL_URL = "http://anchore33-priv.novarese.net:8228"
     // but I have a secret text credential called AnchorectlURL:
-    ANCHORECTL_URL = credentials("Anchorectl_Url")
+    // ANCHORECTL_URL = credentials("Anchorectl_Url")
     //
     // assuming you want to use docker hub, this shouldn't need
     // any changes, but if you're using another registry, you
     // may need to tweek REPOSITORY 
     REPOSITORY = "${DOCKER_HUB_USR}/anchorectl-test"
     TAG = "build-${BUILD_NUMBER}"
-    PASSTAG = "main"
+    // PASSTAG = "main"
     //
   } // end environment
 
