@@ -23,9 +23,9 @@ jobs:
   Build-Scan-Promote:
     runs-on: ubuntu-latest
     env:
-      ANCHORECTL_USERNAME: ${{ secrets.ANCHORECTL_USERNAME }}
+      ANCHORECTL_URL: ${{ vars.ANCHORECTL_URL }}
+      ANCHORECTL_USERNAME: ${{ vars.ANCHORECTL_USERNAME }}
       ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
-      ANCHORECTL_URL: ${{ secrets.ANCHORECTL_URL }}
       ## set ANCHORECTL_FAIL_BASED_ON_RESULTS to true if you want to break the pipeline based on the evaluation
       ANCHORECTL_FAIL_BASED_ON_RESULTS: false
       REGISTRY: ghcr.io
