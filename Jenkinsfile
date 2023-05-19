@@ -34,7 +34,7 @@ pipeline {
     // we could hardcode these eg:
     // ANCHORECTL_URL = "http://anchore33-priv.novarese.net:8228"
     // but I have a secret text credential called AnchorectlURL:
-    ANCHORECTL_URL = credentials("AnchorectlUrl")
+    ANCHORECTL_URL = credentials("Anchorectl_Url")
     //
     // assuming you want to use docker hub, this shouldn't need
     // any changes, but if you're using another registry, you
@@ -44,30 +44,15 @@ pipeline {
     PASSTAG = "main"
     //
   } // end environment
+
   agent any
+  
   stages {
     stage('Checkout SCM') {
       steps {
         checkout scm
       } // end steps
-    } // end stage "checkout scm"
-    
-    stage('Install and Verify Tools') {
-      steps {
-        sh """
-          ### install syft (for local SPDX/CycloneDX sbom generation, this will be implemented directly in anchorctl in the future as well)
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b $HOME/.local/bin v0.73.0
-          ### install anchorectl 
-          curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v1.4.0
-          export PATH="$HOME/.local/bin/:$PATH"
-          ### now make sure it all works
-          which syft
-          which anchorectl
-          which docker
-          """
-      } // end steps
-    } // end stage "Verify Tools"
-    
+    } // end stage "checkout scm"    
     
     stage('Build Image') {
       steps {
@@ -94,13 +79,17 @@ pipeline {
     } // end stage "Build Image"
     
     stage('Analyze Image w/ anchorectl') {
+      environment {
+        ANCHORECTL_URL = credentials("Anchorectl_Url")
+        ANCHORECTL_USERNAME = credentials("Anchorectl_Username")
+        ANCHORECTL_PASSWORD = credentials("Anchorectl_Password")
+      }
       steps {
         script {
-          // first, create the local json SBOM to be archived, then
-          // analyze with anchorectl and upload sbom to anchore enterprise
           sh """
-            #### we installed anchorectl locally, PATH gets reset in each stage
-            export PATH="$HOME/.local/bin/:$PATH"
+            ### install anchorectl 
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v1.6.0
+            export PATH="$HOME/.local/bin/:$PATH"          
             #
             ### actually add the image to the queue to be scanned
             #
@@ -117,9 +106,10 @@ pipeline {
             #
             anchorectl image add --wait --no-auto-subscribe --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
             #
-            ### alternatively you can use syft to generate the sbom locally and push the sbom to the Anchore Enterprise API:
+            ### alternatively, you can generate the sbom locally and push the sbom to the Anchore Enterprise API
+            ### --from docker tells anchorectl to use the image in the local docker instance:
             #
-            ###  syft -o json packages ${REGISTRY}/${REPOSITORY}:${TAG} | anchorectl image add --wait --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG} --from -
+            ###  anchorectl image add --wait --dockerfile ./Dockerfile --from docker ${REGISTRY}/${REPOSITORY}:${TAG} 
             #
             ### note in this case you don't need to push the image first
             ###
