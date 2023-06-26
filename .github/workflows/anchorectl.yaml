@@ -16,8 +16,6 @@ on:
         description: 'On-Demand Build'  
      
 jobs:
-
-
   Build:
     runs-on: ubuntu-latest
     env:
@@ -44,6 +42,9 @@ jobs:
       uses: docker/setup-buildx-action@v2
 
 
+    ### note that if you want to scan locally, then push the SBOM to
+    ### anchore enterprise, you can set "push: false" so the image stays local
+    ### 
     - name: build local container
       uses: docker/build-push-action@v3
       with:
@@ -76,15 +77,14 @@ jobs:
         
     - name: Install anchorectl Binary
       run: |
-        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin 
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
         export PATH="${HOME}/.local/bin/:${PATH}"
-    
-    - name: Queue Image for Scanning by Anchore Enterprise
+            
+    ### create the SBOM locally and push the SBOM to the API.
+    - name: Generate SBOM and Push to Anchore
       run: |        
-       anchorectl image add --no-auto-subscribe --wait ${IMAGE} 
-       ### if desired, you could pass the dockerfile:
-       ### anchorectl image add --no-auto-subscribe --wait --force --dockerfile ./Dockerfile ${IMAGE}
-                
+        anchorectl image add --no-auto-subscribe --wait --from registry ${IMAGE}
+        
     - name: Pull Vulnerability List
       run: |
         anchorectl image vulnerabilities ${IMAGE} 
