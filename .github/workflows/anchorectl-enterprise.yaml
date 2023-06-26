@@ -5,7 +5,7 @@
 # 2) A user credential with the image-analyzer role
 # 3) Ability to download anchorectl from anchore.io 
 
-name: Anchore Enterprise with anchorectl
+name: zzz Anchore Enterprise with anchorectl
 
 on: 
   #push:
