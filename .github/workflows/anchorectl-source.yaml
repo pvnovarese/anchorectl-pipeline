@@ -3,10 +3,12 @@
 
 name: Create and Upload Source SBOM
 
-on: 
-  push:
-    branches:
-      - main
+on:
+  ### uncomment if you want to fire on every push
+  #push:
+  #  branches:
+  #    - main
+  ### build nightly or whatever period
   #schedule:
   #  - cron: '38 23 */14 * *'
   workflow_dispatch:
@@ -37,8 +39,8 @@ jobs:
                             
     - name: Install Anchore CLI Tools
       run: |
-        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.5.0
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.75.0
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.7.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.80.0
         export PATH="${HOME}/.local/bin/:${PATH}"
         
     - name: Verify Anchore Ready and Reachable
