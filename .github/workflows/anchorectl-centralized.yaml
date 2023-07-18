@@ -71,6 +71,12 @@ jobs:
       run: |
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin 
         export PATH="${HOME}/.local/bin/:${PATH}"
+        
+    - name: Connectivity Check
+      run: |
+        anchorectl version
+        anchorectl system status
+        anchorectl feed list
     
     - name: Queue Image for Scanning by Anchore Enterprise
       run: |        
