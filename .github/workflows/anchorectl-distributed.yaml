@@ -69,10 +69,16 @@ jobs:
       run: |
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
         export PATH="${HOME}/.local/bin/:${PATH}"
+        
+    - name: Connectivity Check
+      run: |
+        anchorectl version
+        anchorectl system status
+        anchorectl feed list
             
     - name: Generate SBOM and Push to Anchore
       run: |        
-        anchorectl image add --no-auto-subscribe --wait --from registry --dockerfile Dockerfile ${IMAGE}
+        anchorectl image add --no-auto-subscribe --wait --from registry --dockerfile Dockerfile --force ${IMAGE}
         
     - name: Pull Vulnerability List
       run: |
