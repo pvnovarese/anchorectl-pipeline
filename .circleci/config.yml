@@ -12,12 +12,9 @@ jobs:
   ### https://docs.anchore.com/current/docs/deployment/anchorectl/
   ###
   ### also in this context there is
-  ### ANCHORE_FAIL_ON_POLICY 
+  ### ANCHORECTL_FAIL_BASED_ON_RESULTS 
   ### which is used to control whether to break pipeline if there
   ### is a policy violation (see scan step below)
-  ###
-  ### it's probably better since anchorectl 1.3.0 to use ANCHORECTL_FAIL_BASED_ON_RESULTS 
-  ### instead of ANCHORE_FAIL_ON_POLICY
   
   ### things to do:
   ### 1)  is there a way to set global variables (constructed from other variables) in circleci?
