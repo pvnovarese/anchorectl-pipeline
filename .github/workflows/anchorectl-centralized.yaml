@@ -80,7 +80,7 @@ jobs:
     
     - name: Queue Image for Scanning by Anchore Enterprise
       run: |        
-       anchorectl image add --no-auto-subscribe --wait --dockerfile ./Dockerfile --force ${IMAGE} 
+       anchorectl image add --no-auto-subscribe --wait --dockerfile ./Dockerfile --force --annotation method=centralized ${IMAGE} 
                 
     - name: Pull Vulnerability List
       run: |
