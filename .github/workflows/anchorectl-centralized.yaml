@@ -6,8 +6,8 @@ on:
   #  branches:
   #    - main
   ### UNCOMMENT THIS SECTION TO BUILD ON A REGULAR SCHEDULE
-  #schedule:
-  #  - cron: '38 23 */14 * *'
+  schedule:
+    - cron: '38 2 * * 6'
   ### UNCOMMENT THIS SECTION TO ENABLE ON-DEMAND BUILDS
   workflow_dispatch:
     inputs:
