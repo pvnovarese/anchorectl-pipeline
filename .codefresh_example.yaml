@@ -70,13 +70,14 @@ steps:
     commands:
       # install latest anchorectl binary
       - apk add --no-cache curl
-      - curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
+      - curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin
       - export PATH="${HOME}/.local/bin/:${PATH}"
+      - anchorectl -vv system status
       ### add image to queue for scanning
       # you don't have to pass the dockerfile, but if you do, --force is recommended
       # highly recomment --no-auto-subscribe to prevent repetitive polling of the tag
       # if you want to check vulns or gate on policy, --wait is required
-      - anchorectl image add --force --dockerfile ${CF_REPO_NAME}/Dockerfile --no-auto-subscribe --wait --annotation build_tool="codefresh" --annotation build_id=${{CF_SHORT_REVISION}} --annotation scan_method="distributed" --from registry ${ANCHORE_IMAGE}
+      - anchorectl image add --no-auto-subscribe --wait --from registry ${ANCHORE_IMAGE}
       ### get raw vulnerability matches (no judgements)
       - anchorectl image vulnerabilities ${ANCHORE_IMAGE}
       ### we'll check the evaluation and get the callouts either way,
@@ -88,5 +89,5 @@ steps:
           anchorectl image check --detail ${ANCHORE_IMAGE} ; 
         fi
     stage: "test"
-
-# at this point you proceed with the rest of your pipeline (move to QA, promote image, &c)
+    
+    # at this point you proceed with the rest of your pipeline (move to QA, promote image, &c)
