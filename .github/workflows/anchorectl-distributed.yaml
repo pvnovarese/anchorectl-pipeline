@@ -67,18 +67,18 @@ jobs:
         
     - name: Install Latest anchorectl Binary
       run: |
-        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin
         export PATH="${HOME}/.local/bin/:${PATH}"
-        
-    - name: Connectivity Check
-      run: |
-        anchorectl version
-        anchorectl system status
-        anchorectl feed list
-            
+                    
     - name: Generate SBOM and Push to Anchore
       run: |        
-        anchorectl image add --no-auto-subscribe --wait --from registry --dockerfile Dockerfile --force --annotation method=distributed ${IMAGE}
+        anchorectl image add --no-auto-subscribe --wait --from registry ${IMAGE}
+        ### --wait is necessary if you want to immediately pull vulns or policy evaluations,
+        ### --no-auto-subscribe tells anchore not to continuously poll the tag for new image pushes
+        ### --from can be registry, docker, or local sbom file (omit for centralized scan)
+        ### if you specify --dockerfile <file>, --force is recommended 
+        ### --annotation is always optional
+        ### see "anchorectl image add -h" for more info
         
     - name: Pull Vulnerability List
       run: |

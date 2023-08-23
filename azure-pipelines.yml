@@ -44,7 +44,7 @@ steps:
     ### this will do a "distributed" scan (i.e. create the SBOM locally on the 
     ### build runner and push the SBOM to the Anchore API)
     #
-    anchorectl image add --no-auto-subscribe --wait --from registry --dockerfile Dockerfile --force --annotation method=centralized ${IMAGE}
+    anchorectl image add --no-auto-subscribe --wait --from registry ${IMAGE}
     #
     ### alternatively, for a "centralized" scan (i.e. inform the API to have
     ### the backend analyzer pod pull the image and create the SBOM), do this:
