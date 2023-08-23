@@ -71,16 +71,15 @@ jobs:
       run: |
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin 
         export PATH="${HOME}/.local/bin/:${PATH}"
-        
-    - name: Connectivity Check
-      run: |
-        anchorectl version
-        anchorectl system status
-        anchorectl feed list
-    
+            
     - name: Queue Image for Scanning by Anchore Enterprise
       run: |        
-       anchorectl image add --no-auto-subscribe --wait --dockerfile ./Dockerfile --force --annotation method=centralized ${IMAGE} 
+       anchorectl image add --no-auto-subscribe --wait ${IMAGE} 
+       ### --wait is necessary if you want to immediately pull vulns or policy evaluations,
+       ### --no-auto-subscribe tells anchore not to continuously poll the tag for new image pushes
+       ### if you specify --dockerfile <file>, --force is recommended 
+       ### --annotation is always optional
+       ### see "anchorectl image add -h" for more info
                 
     - name: Pull Vulnerability List
       run: |
