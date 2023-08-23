@@ -1,0 +1,93 @@
+# More examples of Codefresh YAML can be found at
+# https://codefresh.io/docs/docs/yaml-examples/examples/
+version: "1.0"
+
+### you will need to define/store these variables:
+### ANCHORECTL_URL
+### ANCHORECTL_USERNAME
+### ANCHORECTL_PASSWORD
+### 
+### see anchorectl docs for more info 
+### https://docs.anchore.com/current/docs/using/anchorectl_usage/
+### https://docs.anchore.com/current/docs/deployment/anchorectl/
+###
+### also if you want to break on policy violations, then set 
+### ANCHORE_FAIL_ON_POLICY=true
+### (there is a commented-out line in the test stage where you can
+###  set this, or you could add it as a project variable)
+
+stages:
+  - "build"
+  - "test"
+
+steps:
+
+  prep:
+    title: "Prepare Environment"
+    image: alpine:latest
+    commands:
+      # cf_export is codefresh-specific to export variables across steps
+      - export ANCHORE_REGISTRY="docker.io"
+      - export ANCHORE_REPO=${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}
+      - export ANCHORE_IMAGE_REPO=${ANCHORE_REGISTRY}/${ANCHORE_REPO}
+      - export ANCHORE_IMAGE_TAG=cf-${{CF_BRANCH}}
+      - cf_export ANCHORE_REGISTRY ANCHORE_REPO ANCHORE_IMAGE_REPO ANCHORE_IMAGE_TAG 
+    stage: "build"
+
+  clone:
+    title: "Cloning Repository"
+    type: "git-clone"
+    repo: "${{ANCHORE_REPO}}"
+    revision: "${{CF_BRANCH}}"
+    git: "github"
+    stage: "build"
+
+  build:
+    title: "Building Docker Image"
+    type: "build"
+    ### disable caches to make sure we get a clean build
+    no_cache: true
+    no_cf_cache: true
+    ### codefresh's build step is weird, it absolutely assumes you are using 
+    ### docker hub and adds "docker.io" to your image name even if you already
+    ### included it, so I am using ANCHORE_REPO here 
+    ### instead of ANCHORE_IMAGE_REPO
+    ### I kind of think it would make more sense to just use a freestyle
+    ### step here and just issue a "docker build" and "docker push" etc
+    registry: ${{ANCHORE_REGISTRY}}
+    image_name: "${{ANCHORE_REPO}}"
+    working_directory: "${{clone}}"
+    tag: "${{ANCHORE_TEST_TAG}}"
+    dockerfile: "Dockerfile"
+    stage: "build"
+
+  test:
+    title: "Scan with Anchore Enterprise"
+    image: alpine:latest
+    environment:
+      - ANCHORE_IMAGE=${{ANCHORE_IMAGE_REPO}}:${{ANCHORE_IMAGE_TAG}}
+      ### uncomment the following line if you want to break the pipeline for policy violation (or set it as a project variable, whatever)
+      #- ANCHORE_FAIL_ON_POLICY=true
+    commands:
+      # install latest anchorectl binary
+      - apk add --no-cache curl
+      - curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v1.6.0
+      - export PATH="${HOME}/.local/bin/:${PATH}"
+      ### add image to queue for scanning
+      # you don't have to pass the dockerfile, but if you do, --force is recommended
+      # highly recomment --no-auto-subscribe to prevent repetitive polling of the tag
+      # if you want to check vulns or gate on policy, --wait is required
+      - anchorectl image add --force --dockerfile ${CF_REPO_NAME}/Dockerfile --no-auto-subscribe --wait --annotation build_tool="codefresh" --annotation build_id=${{CF_SHORT_REVISION}} --annotation scan_method="distributed" --from registry ${ANCHORE_IMAGE}
+      ### get raw vulnerability matches (no judgements)
+      - anchorectl image vulnerabilities ${ANCHORE_IMAGE}
+      ### we'll check the evaluation and get the callouts either way,
+      ### only break the pipeline if ANCHORE_FAIL_ON_POLICY=true
+      - |
+        if [ "$ANCHORE_FAIL_ON_POLICY" == "true" ] ; then 
+          anchorectl image check --detail --fail-based-on-results ${ANCHORE_IMAGE} ; 
+        else 
+          anchorectl image check --detail ${ANCHORE_IMAGE} ; 
+        fi
+    stage: "test"
+
+# at this point you proceed with the rest of your pipeline (move to QA, promote image, &c)
