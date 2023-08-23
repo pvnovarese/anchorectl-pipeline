@@ -54,10 +54,9 @@ steps:
     ### instead of ANCHORE_IMAGE_REPO
     ### I kind of think it would make more sense to just use a freestyle
     ### step here and just issue a "docker build" and "docker push" etc
-    registry: ${{ANCHORE_REGISTRY}}
     image_name: "${{ANCHORE_REPO}}"
     working_directory: "${{clone}}"
-    tag: "${{ANCHORE_TEST_TAG}}"
+    tag: "${{ANCHORE_IMAGE_TAG}}"
     dockerfile: "Dockerfile"
     stage: "build"
 
