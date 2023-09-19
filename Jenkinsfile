@@ -49,7 +49,7 @@ pipeline {
             echo "${DOCKER_HUB_PSW}" | docker login ${REGISTRY} -u ${DOCKER_HUB_USR} --password-stdin
             docker build -t ${REGISTRY}/${REPOSITORY}:${TAG} --pull -f ./Dockerfile .
             # we don't need to push since we're using anchorectl, but if you wanted to you could do this:
-            docker push ${REGISTRY}/${REPOSITORY}:${TAG}
+            # docker push ${REGISTRY}/${REPOSITORY}:${TAG}
           """
           // I don't like using the docker plugin but if you want to use it, here ya go
           // DOCKER_IMAGE = docker.build REPOSITORY + ":" + TAG
@@ -88,18 +88,18 @@ pipeline {
             #
             ### --dockerfile is optional but if you want to test Dockerfile instructions this is recommended
             #
-            anchorectl image add --wait --no-auto-subscribe --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
+            # anchorectl image add --wait --no-auto-subscribe --force --dockerfile ./Dockerfile ${REGISTRY}/${REPOSITORY}:${TAG}
             #
             ### alternatively, you can generate the sbom locally and push the sbom to the Anchore Enterprise API
             ### --from docker tells anchorectl to use the image in the local docker instance:
             #
-            ###  anchorectl image add --wait --dockerfile ./Dockerfile --from docker ${REGISTRY}/${REPOSITORY}:${TAG} 
+            anchorectl image add --wait --dockerfile ./Dockerfile --from docker ${REGISTRY}/${REPOSITORY}:${TAG} 
             #
             ### note in this case you don't need to push the image first
             ###
             ###
             ### uncomment to pull vulnerability list (optional)
-            # anchorectl image vulnerabilities ${REGISTRY}/${REPOSITORY}:${TAG}
+            anchorectl image vulnerabilities ${REGISTRY}/${REPOSITORY}:${TAG}
             ###
             ### check policy evaluation
             anchorectl image check --detail ${REGISTRY}/${REPOSITORY}:${TAG}
