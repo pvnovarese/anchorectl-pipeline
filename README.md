@@ -8,7 +8,7 @@ anchorectl is a command line interface tool for interacting with Anchore Enterpr
 
 ## Quickstart Install
 
-```curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b /usr/local/bin```
+```curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b /usr/local/bin v4.9.0```
 
 This will install the latest version into /usr/local/bin.  In pipeline usage, depending on tooling, you may need to install as a non-root user, in which case you can install in a location such as `${HOME}/.local/bin` or similar.  You may also need to augment your `${PATH}` depending on environment.
 
