@@ -90,3 +90,19 @@ jobs:
         # policy evaluation returns FAIL or add -f, --fail-based-on-results to this command for the same result
         #
         anchorectl image check --detail ${IMAGE}
+
+    ### If you want to archive an SBOM, uncomment the following:
+    #
+    #- name: Pull SBOM
+    #  run: |
+    #    ### change spdx-json to cyclonedx-json, syft-json etc as needed
+    #    anchorectl image sbom -o spdx-json -f sbom.json ${IMAGE} 
+    #
+    #- name: Archive SBOM
+    #  if: always()
+    #  uses: actions/upload-artifact@v2
+    #  with:
+    #    name: spdx_sbom
+    #    path: sbom.json
+    #    retention-days: 14        
+
