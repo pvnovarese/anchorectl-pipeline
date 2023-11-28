@@ -5,9 +5,9 @@ name: Create and Upload Source SBOM
 
 on:
   ### uncomment if you want to fire on every push
-  #push:
-  #  branches:
-  #    - main
+  push:
+    branches:
+      - main
   ### build nightly or whatever period
   #schedule:
   #  - cron: '38 23 */14 * *'
