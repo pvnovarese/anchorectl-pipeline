@@ -1,0 +1,67 @@
+image: docker:latest
+services:
+- docker:dind
+stages:
+- build
+- anchore_scan
+variables:
+  # set this to true if you want to break pipelines based on policy evaluation
+  ANCHORECTL_FAIL_BASED_ON_RESULTS: "false"
+  # this is the tag of the container image we're going to build and scan
+  ANCHORE_IMAGE: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+
+build:
+  stage: build
+  image: docker:latest
+  needs: []
+  services:
+  - docker:dind
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.com
+    - docker build -t ${ANCHORE_IMAGE} .
+    - docker push ${ANCHORE_IMAGE}
+
+anchore_scan:
+  stage: anchore_scan
+  image: anchore/enterprise-gitlab-scan:v3
+  needs: ["build"]
+  # you will need three variables defined (group or repo settings -> CICD -> variables)
+  # ANCHORECTL_USERNAME
+  # ANCHORECTL_PASSWORD
+  # ANCHORECTL_URL
+  # you may also need ANCHORECTL_ACCOUNT, please refer to anchorectl docs https://docs.anchore.com/current/docs/deployment/anchorectl/
+  script:
+    ### make sure anchore enterprise is reachable and ready (uncomment for debugging)
+    # - anchorectl -vv system status
+
+    ### make sure we have the latest anchorectl
+    - curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v4.9.0
+
+    ### scan the image and push sbom to Anchore Enterprise:
+    #
+    - anchorectl image add --no-auto-subscribe --wait --dockerfile Dockerfile --force --from registry ${ANCHORE_IMAGE}
+    #
+    ### --wait is necessary if you want to immediately pull vulns or policy evaluations
+    ### (including using the anchore-gitlab-scan script below)
+    ### --no-auto-subscribe (-n) disables continuously polling the tag for new image pushes
+    ### --from can be registry, docker, or local sbom file (omit for centralized scan)
+    ### if you specify --dockerfile <file>, --force is recommended 
+    ### see "anchorectl image add -h" for more info
+
+    ### anchore-gitlab-scan adds ${ANCHORE_IMAGE} to the queue, waits for it to complete 
+    ### (if the image has already been scanned, the queue will essentially no-op),
+    ### then grabs the result and outputs SARIF format that gitlab security dashboard
+    ### can consume.  
+    - anchore-gitlab-scan > gl-container-scanning-report.json    
+    
+    ### then (optionally) get the results:
+    ### the below line will get basically the same data as the "gl-container-scanning-report" above but in human-readable text table format
+    #- anchorectl image vulnerabilities ${ANCHORE_IMAGE}
+    ### uncomment the below line to check policy and break the pipeline for policy violations (if you set ANCHORECTL_FAIL_BASED_ON_RESULTS up above)
+    #- anchorectl image check --detail ${ANCHORE_IMAGE}
+
+  ### you can omit this section if you're not using GitLab Ultimate's security dashboard, but leaving it won't hurt anything  
+  artifacts:
+    reports:
+      container_scanning: gl-container-scanning-report.json
+
