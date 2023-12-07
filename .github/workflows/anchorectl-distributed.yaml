@@ -78,6 +78,7 @@ jobs:
         ### --from can be registry, docker, or local sbom file (omit for centralized scan)
         ### if you specify --dockerfile <file>, --force is recommended 
         ### --annotation is always optional
+        ### for multi-arch images, specify (e.g.) --platform amd64 and scan each arch individually
         ### see "anchorectl image add -h" for more info
         
     - name: Pull Vulnerability List
