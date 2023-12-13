@@ -23,7 +23,7 @@ build:
 
 anchore_scan:
   stage: anchore_scan
-  image: anchore/enterprise-gitlab-scan:v3
+  image: anchore/enterprise-gitlab-scan:v4.0.0
   needs: ["build"]
   # you will need three variables defined (group or repo settings -> CICD -> variables)
   # ANCHORECTL_USERNAME
