@@ -50,17 +50,16 @@ jobs:
         
     - name: Generate SBOM and Push to Anchore Enterprise
       run: |
-        syft -o syft-json=syft.json . 
-        # | anchorectl source add --wait ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} --application ${APPLICATION}@${VERSION} --from -
+        syft -o syft-json . | anchorectl source add --wait ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} --application ${APPLICATION}@${VERSION} --from -
         
     - name: Pull Vulnerability List
       run: |
         anchorectl source vulnerabilities ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} 
 
-    - name: Archive SBOM
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: syft_sbom
-        path: syft.json
-        retention-days: 14        
+    #- name: Archive SBOM
+    #  if: always()
+    #  uses: actions/upload-artifact@v3
+    #  with:
+    #    name: syft_sbom
+    #    path: syft.json
+    #    retention-days: 14        
