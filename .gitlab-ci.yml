@@ -23,7 +23,7 @@ build:
 
 anchore_scan:
   stage: anchore_scan
-  image: anchore/enterprise-gitlab-scan:v3
+  image: anchore/enterprise-gitlab-scan:v4.0.0
   needs: ["build"]
   # you will need three variables defined (group or repo settings -> CICD -> variables)
   # ANCHORECTL_USERNAME
@@ -35,7 +35,7 @@ anchore_scan:
     # - anchorectl -vv system status
 
     ### make sure we have the latest anchorectl
-    - curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v4.9.0
+    - curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh  | sh -s -- -b $HOME/.local/bin v5.1.0
 
     ### scan the image and push sbom to Anchore Enterprise:
     #
