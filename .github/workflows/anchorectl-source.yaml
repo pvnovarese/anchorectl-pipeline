@@ -40,7 +40,7 @@ jobs:
     - name: Install Anchore CLI Tools
       run: |
         curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.0.0
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.90.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.97.1
         export PATH="${HOME}/.local/bin/:${PATH}"
         
     - name: Verify Anchore Ready and Reachable
