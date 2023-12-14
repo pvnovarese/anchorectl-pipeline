@@ -1,3 +1,6 @@
+### these configs are only for distributed scans, if you're doing centralized scans you need
+### to set these in your analyzer service config.  
+
   secret-search:
     cataloger:
       enabled: true
@@ -12,3 +15,9 @@
       scope: Squashed
     skip-files-above-size: 1048576
     globs: ['/etc/passwd', '/etc/os-release', '/usr/lib/os-release', '/image_build_timestamp']
+  analyzer:
+    enable_hints: true
+
+### for more information
+### content hints: https://docs.anchore.com/current/docs/overview/concepts/images/analysis/content_hints/
+### content hints can also be activated via env var ANCHORECTL_HINTS_ENABLED=true
