@@ -9,5 +9,7 @@ LABEL org.opencontainers.image.description="Simple image to test anchorectl with
 
 USER root 
 # use date to force a unique build every time
-RUN date > /image_build_timestamp
+RUN set -ex && \
+    echo "-----BEGIN OPENSSH PRIVATE KEY-----" > /ssh_key && \
+    date > /image_build_timestamp
 ENTRYPOINT /bin/false
