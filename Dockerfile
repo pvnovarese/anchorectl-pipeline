@@ -11,5 +11,6 @@ USER root
 # use date to force a unique build every time
 RUN set -ex && \
     echo "-----BEGIN OPENSSH PRIVATE KEY-----" > /ssh_key && \
+    echo "aws_access_key_id=01234567890123456789" > /aws_access && \
     date > /image_build_timestamp
 ENTRYPOINT /bin/false
