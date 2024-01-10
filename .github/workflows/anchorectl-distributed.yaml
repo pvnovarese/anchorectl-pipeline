@@ -75,7 +75,7 @@ jobs:
                     
     - name: Generate SBOM and Push to Anchore
       run: |        
-        anchorectl image add --no-auto-subscribe --wait --from registry ${IMAGE}
+        anchorectl -vv image add --no-auto-subscribe --wait --from registry ${IMAGE}
         ### --wait is necessary if you want to immediately pull vulns or policy evaluations,
         ### --no-auto-subscribe tells anchore not to continuously poll the tag for new image pushes
         ### --from can be registry, docker, or local sbom file (omit for centralized scan)
