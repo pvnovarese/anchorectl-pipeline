@@ -1,22 +1,22 @@
 ### these configs are only for distributed scans, if you're doing centralized scans you need
 ### to set these in your analyzer service config.  
 
-  secret-search:
-    cataloger:
-      enabled: true
-      scope: AllLayers
-    additional-patterns: {}
-    exclude-pattern-names: []
-    reveal-values: false
-    skip-files-above-size: 1048576
-  file-contents:
-    cataloger:
-      enabled: true
-      scope: Squashed
-    skip-files-above-size: 1048576
-    globs: ['/etc/passwd', '/etc/os-release', '/usr/lib/os-release', '/image_build_timestamp']
-  analyzer:
-    enable_hints: true
+secret-search:
+  cataloger:
+    enabled: true
+    scope: Squashed
+  additional-patterns: {}
+  exclude-pattern-names: []
+  reveal-values: false
+  skip-files-above-size: 1048576
+file-contents:
+  cataloger:
+    enabled: true
+    scope: Squashed
+  skip-files-above-size: 1048576
+  globs: ['/etc/passwd', '/etc/os-release', '/usr/lib/os-release', '/image_build_timestamp']
+analyzer:
+  enable_hints: true
 
 ### for more information
 ### content hints: https://docs.anchore.com/current/docs/overview/concepts/images/analysis/content_hints/
