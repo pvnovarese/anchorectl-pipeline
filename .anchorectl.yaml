@@ -4,7 +4,7 @@
 secret-search:
   cataloger:
     enabled: true
-    scope: Squashed
+    scope: AllLayers
   additional-patterns: {}
   exclude-pattern-names: []
   reveal-values: false
