@@ -19,7 +19,7 @@ env:
   ANCHORECTL_USERNAME: ${{ vars.ANCHORECTL_USERNAME }}
   ANCHORECTL_PASSWORD: ${{ secrets.ANCHORECTL_PASSWORD }}
   ## set ANCHORECTL_FAIL_BASED_ON_RESULTS to true if you want to break the pipeline based on the evaluation
-  ANCHORECTL_FAIL_BASED_ON_RESULTS: false
+  ANCHORECTL_FAIL_BASED_ON_RESULTS: true
   ## you can enable hints file via environment or .anchorectl.yaml
   ## see https://docs.anchore.com/current/docs/overview/concepts/images/analysis/content_hints/
   ANCHORECTL_HINTS_ENABLED: true
