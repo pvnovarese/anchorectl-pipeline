@@ -44,11 +44,11 @@ jobs:
         export PATH="${HOME}/.local/bin/:${PATH}"
 
     ### optional debug step
-    - name: Verify Anchore Ready and Reachable
-      run: |
-        anchorectl version
-        anchorectl system status 
-        echo "$GITHUB_CONTEXT"
+    #- name: Verify Anchore Ready and Reachable
+    #  run: |
+    #    anchorectl version
+    #    anchorectl system status 
+    #    echo "$GITHUB_CONTEXT"
         
     - name: Generate SBOM and Push to Anchore Enterprise
       run: |
