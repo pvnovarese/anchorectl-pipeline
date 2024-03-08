@@ -47,7 +47,7 @@ jobs:
     #- name: Verify Anchore Ready and Reachable
     #  run: |
     #    anchorectl version
-    #    anchorectl system status 
+    #    anchorectl -vv system status 
     #    echo "$GITHUB_CONTEXT"
         
     - name: Generate SBOM and Push to Anchore Enterprise
