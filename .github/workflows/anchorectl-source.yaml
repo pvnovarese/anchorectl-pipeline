@@ -39,27 +39,40 @@ jobs:
                             
     - name: Install Anchore CLI Tools
       run: |
-        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.1.0
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.97.1
+        curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.3.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ${HOME}/.local/bin v0.105.0
         export PATH="${HOME}/.local/bin/:${PATH}"
-        
-    - name: Verify Anchore Ready and Reachable
-      run: |
-        anchorectl version
-        anchorectl system status 
+
+    ### optional debug step
+    #- name: Verify Anchore Ready and Reachable
+    #  run: |
+    #    anchorectl version
+    #    anchorectl system status 
         
     - name: Generate SBOM and Push to Anchore Enterprise
       run: |
-        syft -o syft-json . | anchorectl source add --wait ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} --application ${APPLICATION}@${VERSION} --from -
-        
+        syft -o syft-json . | anchorectl source add --wait --application ${APPLICATION}@${VERSION} --from - ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} 
+        ### note 1: --wait is optional, though recommended IF you want to pull the vulnerability report or grab the sbom immediately 
+        ### note 2: --application is also optional, though without this you will not (as of 5.3.0) see the sbom in the Anchore Web UI, only via "anchorectl source list"
+        ### note 3: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} is just an arbitrary label for human readability, but the convention is to use the git repo name and commit hash for this.
+
+    ### optional
     - name: Pull Vulnerability List
       run: |
         anchorectl source vulnerabilities ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7} 
+        ### from the command line you can use "anchorectl source vuln" or "anchorectl source vulns" to save keystrokes
+        ### if you want this in other formats, add "-o json" or "-o csv"
 
-    #- name: Archive SBOM
-    #  if: always()
-    #  uses: actions/upload-artifact@v3
-    #  with:
-    #    name: syft_sbom
-    #    path: syft.json
-    #    retention-days: 14        
+    ### optional
+    - name: Pull SBOM
+      run: | 
+        anchorectl source sbom -o spdx-json -f source.sbom.json ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}@${GITHUB_SHA:0:7}
+        
+    ### optional
+    - name: Archive SBOM
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: source_sbom
+        path: source.sbom.json
+        retention-days: 14        
