@@ -1,6 +1,10 @@
 ### these configs are only for distributed scans, if you're doing centralized scans you need
 ### to set these in your analyzer service config.  
 
+### to add patterns to secret-search, the additional-patterns should look like this:
+####   additional-patterns: {
+####      "foobar": '.*foobar.*'
+####    }
 secret-search:
   cataloger:
     enabled: true
