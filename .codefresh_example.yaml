@@ -70,7 +70,7 @@ steps:
     commands:
       # install latest anchorectl binary
       - apk add --no-cache curl
-      - curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.1.0
+      - curl -sSfL https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.6.0
       - export PATH="${HOME}/.local/bin/:${PATH}"
       - anchorectl -vv system status
       ### add image to queue for scanning
