@@ -49,7 +49,7 @@ jobs:
             ### install syft and anchorectl.  syft is only needed if you want to scan  
             ### locally on the runner and push the sboms to Anchore Enterprise.  
             #
-            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.1.0
+            curl -sSfL  https://anchorectl-releases.anchore.io/anchorectl/install.sh | sh -s -- -b ${HOME}/.local/bin v5.6.0
       - run:
           name: Test Docker image
           command: |
